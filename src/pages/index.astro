@@ -1,9 +1,24 @@
 ---
 import Layout from '../layouts/Layout.astro';
 export const prerender = false;
+
+const schemaData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "SiteIntelica",
+  "operatingSystem": "Web",
+  "applicationCategory": "DeveloperApplication",
+  "description": "Advanced tech stack analyzer and competitor intelligence tool. Reveal exactly how a website is built and monetized.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+};
 ---
 
 <Layout title="The Ultimate Tech Stack 'Spy' Tool">
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(schemaData)} />
   <div class="container">
     <header class="hero text-center pt-24 pb-16">
       <h1 class="text-gradient text-5xl md:text-7xl font-extrabold mb-4 tracking-tight">SiteIntelica</h1>

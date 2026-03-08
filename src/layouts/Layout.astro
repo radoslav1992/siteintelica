@@ -25,6 +25,7 @@ const currentPath = Astro.url.pathname;
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={Astro.url.href} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site || Astro.url).href} />
 
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4657327478747074" crossorigin="anonymous"></script>
