@@ -1,0 +1,32 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="404: Page Not Found" description="The intelligence you are looking for does not exist.">
+  <div class="container pb-24 text-center mt-24">
+    <div class="glass-panel" style="max-width: 600px; margin: 0 auto; padding: 4rem 2rem;">
+      <h1 class="text-gradient font-extrabold mb-4" style="font-size: 5rem; line-height: 1;">404</h1>
+      <h2 class="text-2xl font-bold mb-4">Signal Lost</h2>
+      <p class="text-secondary mb-8 text-lg">
+        The page or dataset you are trying to intercept does not exist or has been removed from our archives.
+      </p>
+      
+      <a href="/" class="btn-primary" style="display: inline-block; text-decoration: none;">
+        Return to HQ
+      </a>
+    </div>
+  </div>
+
+  <style>
+    .text-center { text-align: center; }
+    .mt-24 { margin-top: 6rem; }
+    .pb-24 { padding-bottom: 6rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .mb-8 { margin-bottom: 2rem; }
+    .font-extrabold { font-weight: 800; }
+    .font-bold { font-weight: 700; }
+    .text-2xl { font-size: 1.5rem; }
+    .text-lg { font-size: 1.125rem; }
+    .text-secondary { color: hsl(var(--text-secondary)); }
+  </style>
+</Layout>

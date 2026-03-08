@@ -1,0 +1,69 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "X-Ray any website to reveal its tech stack and how it makes money." } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <!-- SEO Optimization -->
+    <title>{title} | SiteIntelica</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={`${title} | SiteIntelica`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={Astro.url.href} />
+
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4657327478747074" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div class="layout-wrapper">
+      <header class="container">
+        <nav class="navbar">
+          <a href="/" class="nav-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
+              <path d="M2 12h3l3 -9l5 18l3 -9h5" />
+            </svg>
+            SiteIntelica
+          </a>
+          <div class="nav-links">
+            <a href="/" class={`nav-link ${currentPath === '/' ? 'active' : ''}`}>Spy Tool</a>
+            <a href="/about" class={`nav-link ${currentPath === '/about' ? 'active' : ''}`}>About</a>
+            <a href="/knowledge" class={`nav-link ${currentPath === '/knowledge' ? 'active' : ''}`}>Knowledge</a>
+          </div>
+        </nav>
+      </header>
+
+      <main class="flex-grow">
+        <slot />
+      </main>
+
+      <footer class="footer container">
+        <div class="footer-content">
+          <div class="copyright">
+            &copy; {new Date().getFullYear()} SiteIntelica. All rights reserved.
+          </div>
+          <div class="footer-links">
+            <a href="/about" class="footer-link">About</a>
+            <a href="/knowledge" class="footer-link">Knowledge Base</a>
+            <a href="/privacy" class="footer-link">Privacy Policy</a>
+            <a href="/terms" class="footer-link">Terms of Service</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

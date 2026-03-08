@@ -1,0 +1,45 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Terms of Service" description="SiteIntelica Terms of Service">
+  <div class="container prose">
+    <h1>Terms of Service</h1>
+    <p>Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+
+    <h2>1. Acceptance of Terms</h2>
+    <p>
+      By accessing and using SiteIntelica, you accept and agree to be bound by the terms and provision of this agreement.
+    </p>
+
+    <h2>2. Description of Service</h2>
+    <p>
+      SiteIntelica provides a web-based tool for analyzing the underlying technology stacks of public-facing web applications. You agree to use this service only for lawful research, competitor analysis, and educational purposes.
+    </p>
+
+    <h2>3. Acceptable Use Policy</h2>
+    <p>
+      When using SiteIntelica, you agree that you will not:
+    </p>
+    <ul>
+      <li>Attempt to decipher, decompile, disassemble, or reverse engineer any of the software comprising the tool itself.</li>
+      <li>Use the service to engage in any Denial of Service (DoS) attacks or deliberately overload the scraping API endpoint.</li>
+      <li>Use the service for any illegal or unauthorized purpose, including violating any local, state, or international laws.</li>
+    </ul>
+
+    <h2>4. Disclaimer of Warranties</h2>
+    <p>
+      The information provided by the SiteIntelica tool is gathered through heuristic scraping methods. While we strive to provide the most accurate technology detection possible, the service is provided "as is" and without warranty of any kind. We do not guarantee that the technology list generated will be 100% comprehensive or free from false positives.
+    </p>
+
+    <h2>5. Limitation of Liability</h2>
+    <p>
+      In no event shall SiteIntelica, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
+    </p>
+
+    <h2>6. Modifications to Service</h2>
+    <p>
+      SiteIntelica reserves the right at any time and from time to time to modify or discontinue, temporarily or permanently, the Service (or any part thereof) with or without notice.
+    </p>
+  </div>
+</Layout>

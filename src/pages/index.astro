@@ -1,0 +1,658 @@
+---
+import Layout from '../layouts/Layout.astro';
+export const prerender = false;
+---
+
+<Layout title="The Ultimate Tech Stack 'Spy' Tool">
+  <div class="container">
+    <header class="hero text-center pt-24 pb-16">
+      <h1 class="text-gradient text-5xl md:text-7xl font-extrabold mb-4 tracking-tight">SiteIntelica</h1>
+      <p class="text-xl md:text-2xl text-secondary max-w-2xl mx-auto mb-12">
+        X-Ray any website. Reveal exactly how it's built and how it makes money.
+      </p>
+      
+      <form id="analyze-form" class="input-group glass-panel p-2">
+        <input 
+          type="url" 
+          id="url-input" 
+          class="search-input" 
+          placeholder="Enter competitor URL (e.g., https://stripe.com)" 
+          required 
+          pattern="https?://.*"
+        />
+        <button type="submit" id="submit-btn" class="btn-primary">
+          <span id="btn-text">Analyze</span>
+          <span id="btn-loader" class="loader" style="display: none;"></span>
+        </button>
+      </form>
+      <div id="error-message" class="text-red-500 mt-4 text-sm hidden" style="color: #ff4b4b;"></div>
+      <div id="history-message" class="text-secondary mt-2 text-sm hidden"></div>
+      
+      <button id="download-pdf-btn" class="glass-panel text-sm hidden" style="margin-top:1.5rem; padding:0.5rem 1rem; cursor:pointer; font-family:'Outfit'; font-weight:600; color:hsl(var(--text-primary)); display:inline-flex; align-items:center; gap:0.5rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download PDF Report
+      </button>
+    </header>
+
+    <section id="results-section" class="results-grid hidden pb-24">
+      <!-- Results will be injected here via JavaScript -->
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+      <h2 class="faq-title">Frequently Asked Questions</h2>
+      
+      <div class="faq-item">
+        <button class="faq-question">
+          What exactly does SiteIntelica do?
+          <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            We act as an "X-Ray" for websites. By entering a URL, SiteIntelica scans the code, headers, and DOM to reveal the exact technology stack powering the site—including content management systems (CMS), modern frontend frameworks like Astro and React, analytics tools, and ad networks.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Is the analysis accurate in real-time?
+          <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            Yes! When you click "Analyze," our server spins up a dedicated scraping process that actively visits the website, reads its current code and headers, and matches them against thousands of technology signatures.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Can I see what ad networks a competitor uses?
+          <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            Absolutely. Our scanner identifies dozens of different marketing, remarketing, and ad network pixels so you can tell exactly how a competitor might be buying traffic or monetizing their audience.
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <style>
+    .hero {
+      min-height: 40vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .text-center { text-align: center; }
+    .pt-24 { padding-top: 6rem; }
+    .pb-16 { padding-bottom: 4rem; }
+    .pb-24 { padding-bottom: 6rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .mb-12 { margin-bottom: 3rem; }
+    .mt-4 { margin-top: 1rem; }
+    
+    .text-5xl { font-size: 3rem; }
+    .text-7xl { font-size: 4.5rem; }
+    .text-xl { font-size: 1.25rem; }
+    .text-2xl { font-size: 1.5rem; }
+    .text-sm { font-size: 0.875rem; }
+    
+    .font-extrabold { font-weight: 800; }
+    .tracking-tight { letter-spacing: -0.025em; }
+    
+    .max-w-2xl { max-width: 42rem; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    
+    .text-secondary { color: hsl(var(--text-secondary)); }
+    .hidden { display: none !important; }
+    
+    /* Bento Grid Layout for Results */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 1000px;
+      margin: 2rem auto 0;
+    }
+    
+    :global(.category-card) {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    :global(.category-title) {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: hsl(var(--text-primary));
+      border-bottom: 1px solid hsla(var(--text-primary), 0.1);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    :global(.tech-list) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .text-5xl { font-size: 2.5rem; }
+      .text-7xl { font-size: 3.5rem; }
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script>
+    import { initFAQ } from '../scripts/faq.js';
+    
+    // Dynamically load html2pdf
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    document.head.appendChild(script);
+
+    const form = document.getElementById('analyze-form') as HTMLFormElement;
+    const urlInput = document.getElementById('url-input') as HTMLInputElement;
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnLoader = document.getElementById('btn-loader');
+    const resultsSection = document.getElementById('results-section');
+    const errorMessage = document.getElementById('error-message');
+    const historyMessage = document.getElementById('history-message');
+    const downloadPdfBtn = document.getElementById('download-pdf-btn');
+
+    let currentScanUrl = '';
+
+    downloadPdfBtn?.addEventListener('click', () => {
+        if (!window.html2pdf) {
+            alert('PDF library is still loading, please try again in a moment.');
+            return;
+        }
+        const element = document.getElementById('results-section');
+        const opt = {
+          margin:       0.5,
+          filename:     `SiteIntelica_Report_${currentScanUrl.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#18191e' },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        
+        const originalBg = element.style.background;
+        element.style.background = '#18191e'; // Ensure dark mode background in PDF
+        element.style.padding = '1rem';
+        
+        window.html2pdf().set(opt).from(element).save().then(() => {
+            element.style.background = originalBg;
+            element.style.padding = '';
+        });
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const url = urlInput.value;
+      if (!url) return;
+
+      currentScanUrl = new URL(url).hostname;
+
+      // UI Loading State
+      submitBtn.setAttribute('disabled', 'true');
+      submitBtn.style.opacity = '0.7';
+      btnText.style.display = 'none';
+      btnLoader.style.display = 'inline-block';
+      resultsSection.innerHTML = '';
+      resultsSection.classList.add('hidden');
+      errorMessage.classList.add('hidden');
+      historyMessage.classList.add('hidden');
+      downloadPdfBtn.classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to analyze the website. Please check the URL and try again.');
+        }
+        
+        const data = await response.json();
+        renderResults(data);
+        downloadPdfBtn.classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error:', error);
+        errorMessage.textContent = error.message;
+        errorMessage.classList.remove('hidden');
+      } finally {
+        // Reset UI
+        submitBtn.removeAttribute('disabled');
+        submitBtn.style.opacity = '1';
+        btnText.style.display = 'inline';
+        btnLoader.style.display = 'none';
+      }
+    });
+    
+    function renderResults(data) {
+      resultsSection.innerHTML = '';
+      
+      if (data.historicalTimestamp) {
+          const date = new Date(data.historicalTimestamp + ' Z').toLocaleString();
+          historyMessage.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; margin-right:4px; vertical-align:middle"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Previous scan found from: ${date}. Showing current fresh results.`;
+          historyMessage.classList.remove('hidden');
+      }
+      
+      if (!data || !data.technologies || data.technologies.length === 0) {
+        resultsSection.innerHTML = '<div class="glass-panel p-2 category-card animate-fade-in"><p>No technologies could be detected for this URL.</p></div>';
+        resultsSection.classList.remove('hidden');
+        return;
+      }
+
+      let delay = 0;
+
+      // 1. Social Links Card
+      if (data.socials && data.socials.length > 0) {
+        const socialCard = document.createElement('div');
+        socialCard.className = 'glass-panel category-card animate-fade-in';
+        socialCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Social & Contact';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        
+        data.socials.forEach(link => {
+          const badge = document.createElement('a');
+          badge.href = link;
+          badge.target = '_blank';
+          badge.className = 'badge';
+          badge.style.textDecoration = 'none';
+          
+          try {
+            const domain = new URL(link).hostname.replace('www.', '');
+            const iconHtml = `<img src="https://logo.clearbit.com/${domain}" width="16" height="16" onerror="this.style.display='none'" style="margin-right: 6px; border-radius: 50%;" alt=""/>`;
+            badge.innerHTML = `${iconHtml}${domain}`;
+          } catch(e) {
+            badge.textContent = 'Link';
+          }
+          list.appendChild(badge);
+        });
+        
+        socialCard.appendChild(title);
+        socialCard.appendChild(list);
+        resultsSection.appendChild(socialCard);
+        delay += 0.1;
+      }
+
+      // 2. Network & Infrastructure Mapping Card
+      if (data.network && Object.keys(data.network).length > 0) {
+        const netCard = document.createElement('div');
+        netCard.className = 'glass-panel category-card animate-fade-in';
+        netCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Network Details';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        if (data.network.ip) {
+          list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">IP Address:</span> <strong>${data.network.ip}</strong></div>`;
+        }
+        if (data.network.mx) {
+          list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Mail Server (MX):</span> <strong style="text-align:right">${data.network.mx}</strong></div>`;
+        }
+        
+        netCard.appendChild(title);
+        netCard.appendChild(list);
+        resultsSection.appendChild(netCard);
+        delay += 0.1;
+      }
+
+      // 2.2 Email Security Card (SPF/DMARC)
+      if (data.network && (data.network.spf || data.network.dmarc)) {
+        const emailCard = document.createElement('div');
+        emailCard.className = 'glass-panel category-card animate-fade-in';
+        emailCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Email Security';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        const getStatus = (isValid) => isValid 
+            ? `<span style="color:#00e676; font-weight:bold;">Active ✓</span>` 
+            : `<span style="color:#ff4b4b;">Missing ✗</span>`;
+
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">SPF Record:</span> ${getStatus(data.network.spf)}</div>`;
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">DMARC Record:</span> ${getStatus(data.network.dmarc)}</div>`;
+        
+        emailCard.appendChild(title);
+        emailCard.appendChild(list);
+        resultsSection.appendChild(emailCard);
+        delay += 0.1;
+      }
+      
+      // 2.3 Domain Profile
+      if (data.whois || data.discovery) {
+        const domainCard = document.createElement('div');
+        domainCard.className = 'glass-panel category-card animate-fade-in';
+        domainCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Domain Profile';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        if (data.whois && data.whois.ageYears) {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">Domain Age:</span> <strong>${data.whois.ageYears} Years</strong></div>`;
+        }
+        if (data.whois && data.whois.registrar) {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Registrar:</span> <strong style="text-align:right">${data.whois.registrar}</strong></div>`;
+        }
+        
+        const getFileStatus = (isValid) => isValid 
+            ? `<span style="color:#00e676; font-weight:bold;">Yes ✓</span>` 
+            : `<span style="color:#ff4b4b;">No ✗</span>`;
+
+        if (data.discovery) {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Ads.txt (Monetization):</span> ${getFileStatus(data.discovery.adsTxt)}</div>`;
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Robots.txt:</span> ${getFileStatus(data.discovery.robotsTxt)}</div>`;
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Sitemap.xml:</span> ${getFileStatus(data.discovery.sitemap)}</div>`;
+        }
+        
+        domainCard.appendChild(title);
+        domainCard.appendChild(list);
+        resultsSection.appendChild(domainCard);
+        delay += 0.1;
+      }
+
+      // 2.5 SEO & Meta Card
+      if (data.seo && (data.seo.title || data.seo.description || data.seo.language)) {
+        const seoCard = document.createElement('div');
+        seoCard.className = 'glass-panel category-card animate-fade-in';
+        seoCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'SEO Profile';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        list.style.gap = '0.5rem';
+        
+        if (data.seo.title) {
+          list.innerHTML += `<div><strong class="text-secondary text-sm block">Page Title:</strong> <span style="font-size:0.9rem">${data.seo.title.substring(0, 60)}${data.seo.title.length > 60 ? '...' : ''}</span></div>`;
+        }
+        if (data.seo.description) {
+          list.innerHTML += `<div><strong class="text-secondary text-sm block">Meta Description:</strong> <span style="font-size:0.85rem; color:#aaa; line-height:1.2; display:block; margin-top:2px;">${data.seo.description.substring(0, 100)}${data.seo.description.length > 100 ? '...' : ''}</span></div>`;
+        }
+        
+        let tagsHtml = `<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">`;
+        if (data.seo.language) tagsHtml += `<span class="badge" style="font-size:0.75rem">Lang: ${data.seo.language.toUpperCase()}</span>`;
+        if (data.seo.h1Count !== undefined) tagsHtml += `<span class="badge" style="font-size:0.75rem">${data.seo.h1Count} &lt;h1&gt; Tags</span>`;
+        if (data.seo.canonical) tagsHtml += `<span class="badge" style="font-size:0.75rem">Canonical URL ✓</span>`;
+        tagsHtml += `</div>`;
+        list.innerHTML += tagsHtml;
+        
+        seoCard.appendChild(title);
+        seoCard.appendChild(list);
+        resultsSection.appendChild(seoCard);
+        delay += 0.1;
+      }
+
+      // 2.55 Social Previews
+      if (data.seo && (data.seo.ogImage || data.seo.ogTitle || data.seo.twitterCard)) {
+        const socialPreviewCard = document.createElement('div');
+        socialPreviewCard.className = 'glass-panel category-card animate-fade-in';
+        socialPreviewCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Social Preview';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        if (data.seo.ogImage) {
+           list.innerHTML += `<div style="width:100%; height:120px; border-radius:0.5rem; overflow:hidden; margin-bottom:0.5rem; border:1px solid hsla(var(--text-primary), 0.1);"><img src="${data.seo.ogImage}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'" /></div>`;
+        }
+        if (data.seo.ogTitle) {
+           list.innerHTML += `<div style="font-weight:600; font-size:0.9rem; line-height:1.2;">${data.seo.ogTitle}</div>`;
+        }
+        if (data.seo.twitterCard) {
+            list.innerHTML += `<div style="margin-top:0.5rem;"><span class="badge" style="font-size:0.7rem;">Twitter Card: ${data.seo.twitterCard}</span></div>`;
+        }
+        
+        socialPreviewCard.appendChild(title);
+        socialPreviewCard.appendChild(list);
+        resultsSection.appendChild(socialPreviewCard);
+        delay += 0.1;
+      }
+      
+      // 2.6 Security Headers Card
+      if (data.security) {
+        const secCard = document.createElement('div');
+        secCard.className = 'glass-panel category-card animate-fade-in';
+        secCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Security Headers';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        const getStatus = (isValid) => isValid 
+            ? `<span style="color:#00e676; font-weight:bold;">Active ✓</span>` 
+            : `<span style="color:#ff4b4b;">Missing ✗</span>`;
+        
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">Strict Transport (HSTS):</span> ${getStatus(data.security.hsts)}</div>`;
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">Content Security Policy:</span> ${getStatus(data.security.csp)}</div>`;
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">X-Frame-Options:</span> ${getStatus(data.security.xframe)}</div>`;
+        if (data.security.xContentTypeOptions !== undefined) {
+             list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">X-Content-Type-Options:</span> ${getStatus(data.security.xContentTypeOptions)}</div>`;
+        }
+        if (data.security.referrerPolicy) {
+             list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Referrer-Policy:</span> <strong style="font-size:0.8rem; text-align:right">${data.security.referrerPolicy}</strong></div>`;
+        }
+        if (data.security.permissionsPolicy) {
+             list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Permissions-Policy:</span> <strong style="font-size:0.8rem; text-align:right; max-width:50%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${data.security.permissionsPolicy}">${data.security.permissionsPolicy}</strong></div>`;
+        }
+        
+        secCard.appendChild(title);
+        secCard.appendChild(list);
+        resultsSection.appendChild(secCard);
+        delay += 0.1;
+      }
+      
+      // 2.65 Architecture & Assets
+      if (data.architecture) {
+        const archCard = document.createElement('div');
+        archCard.className = 'glass-panel category-card animate-fade-in';
+        archCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Page Architecture';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        if (data.architecture.pageWeightBytes) {
+            const kb = (data.architecture.pageWeightBytes / 1024).toFixed(1);
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">HTML Payload:</span> <strong>${kb} KB</strong></div>`;
+        }
+        if (data.architecture.domElements) {
+            let color = '#00e676';
+            if (data.architecture.domElements > 1500) color = '#ffa726';
+            if (data.architecture.domElements > 3000) color = '#ff4b4b';
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">DOM Elements:</span> <strong style="color:${color}">${data.architecture.domElements}</strong></div>`;
+        }
+        if (data.architecture.modernImages !== undefined) {
+             list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Modern Next-Gen Images:</span> <strong>${data.architecture.modernImages} Detected</strong></div>`;
+        }
+        
+        archCard.appendChild(title);
+        archCard.appendChild(list);
+        resultsSection.appendChild(archCard);
+        delay += 0.1;
+      }
+
+      // 2.7 SSL Certificate Card
+      if (data.ssl) {
+        const sslCard = document.createElement('div');
+        sslCard.className = 'glass-panel category-card animate-fade-in';
+        sslCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'SSL / TLS Certificate';
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%;"><span class="text-secondary">Issuer:</span> <strong>${data.ssl.issuer}</strong></div>`;
+        
+        if (data.ssl.validTo) {
+            const expiryStr = new Date(data.ssl.validTo).toLocaleDateString();
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; mt-2"><span class="text-secondary">Expires:</span> <strong>${expiryStr}</strong></div>`;
+        }
+        
+        sslCard.appendChild(title);
+        sslCard.appendChild(list);
+        resultsSection.appendChild(sslCard);
+        delay += 0.1;
+      }
+
+      // 3. Core Web Vitals Card
+      if (data.performance) {
+        const perfCard = document.createElement('div');
+        perfCard.className = 'glass-panel category-card animate-fade-in';
+        perfCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = 'Lighthouse Scores';
+        
+        const grid = document.createElement('div');
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+        grid.style.gap = '1rem';
+        grid.style.textAlign = 'center';
+        
+        const scores = [
+          { label: 'Performance', val: data.performance.score },
+          { label: 'SEO', val: data.performance.seo },
+          { label: 'Access', val: data.performance.accessibility }
+        ];
+        
+        scores.forEach(s => {
+          let color = '#ff4b4b'; // red
+          if (s.val >= 90) color = '#00e676'; // green
+          else if (s.val >= 50) color = '#ffa726'; // orange
+
+          grid.innerHTML += `
+            <div style="display:flex; flex-direction:column; align-items:center;">
+              <div style="width:60px; height:60px; border-radius:50%; border:4px solid ${color}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; color:${color}; margin-bottom:0.5rem; box-shadow: 0 0 10px ${color}33;">
+                ${s.val}
+              </div>
+              <span style="font-size:0.8rem; color:hsl(var(--text-secondary));">${s.label}</span>
+            </div>
+          `;
+        });
+        
+        perfCard.appendChild(title);
+        perfCard.appendChild(grid);
+        resultsSection.appendChild(perfCard);
+        delay += 0.1;
+      }
+      
+      // 4. Group remaining tech technologies by category
+      const groups = {};
+      
+      data.technologies.forEach(tech => {
+        tech.categories.forEach(cat => {
+          if (!groups[cat.name]) {
+            groups[cat.name] = [];
+          }
+          // Avoid duplicates
+          if (!groups[cat.name].find(t => t.name === tech.name)) {
+            groups[cat.name].push(tech);
+          }
+        });
+      });
+      
+      // Sort categories by size (most items first)
+      const sortedCategories = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+      
+      sortedCategories.forEach(categoryName => {
+        const techs = groups[categoryName];
+        
+        const card = document.createElement('div');
+        card.className = 'glass-panel category-card animate-fade-in';
+        card.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.textContent = categoryName;
+        
+        const techList = document.createElement('div');
+        techList.className = 'tech-list';
+        
+        techs.forEach(tech => {
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          
+          let iconHtml = '';
+          if (tech.website) {
+            try {
+               const domain = new URL(tech.website).hostname;
+               iconHtml = `<img src="https://logo.clearbit.com/${domain}" width="16" height="16" onerror="this.style.display='none'" style="margin-right: 6px; border-radius: 50%;" alt=""/>`;
+            } catch(e) {}
+          }
+          
+          badge.innerHTML = `${iconHtml}${tech.name}`;
+          techList.appendChild(badge);
+        });
+        
+        card.appendChild(title);
+        card.appendChild(techList);
+        resultsSection.appendChild(card);
+        
+        delay += 0.1; // Stagger entrance animations
+      });
+      
+      resultsSection.classList.remove('hidden');
+    }
+
+    // Initialize FAQ accordions
+    initFAQ();
+  </script>
+</Layout>
