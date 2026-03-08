@@ -538,6 +538,83 @@ const schemaData = {
         resultsSection.appendChild(archCard);
         delay += 0.1;
       }
+      
+      // 2.67 Contact Intelligence
+      if (data.contacts && (data.contacts.emails.length > 0 || data.contacts.phones.length > 0)) {
+        const contactCard = document.createElement('div');
+        contactCard.className = 'glass-panel category-card animate-fade-in';
+        contactCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Contact Intelligence <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary))">LEADS</span>`;
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        list.style.gap = '0.5rem';
+        
+        data.contacts.emails.slice(0, 5).forEach(email => {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <span class="text-secondary">Email:</span> 
+                <a href="mailto:${email}" style="font-weight:600; font-size:0.9rem; text-decoration:none; color:hsl(var(--text-primary)); border-bottom:1px dashed hsla(var(--text-primary),0.3); padding-bottom:1px;">${email}</a>
+            </div>`;
+        });
+        
+        data.contacts.phones.slice(0, 5).forEach(phone => {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <span class="text-secondary">Phone:</span> 
+                <a href="tel:${phone}" style="font-weight:600; font-size:0.9rem; text-decoration:none; color:hsl(var(--text-primary)); border-bottom:1px dashed hsla(var(--text-primary),0.3); padding-bottom:1px;">${phone}</a>
+            </div>`;
+        });
+        
+        if (data.contacts.emails.length > 5 || data.contacts.phones.length > 5) {
+            list.innerHTML += `<div style="text-align:center; font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:4px;">+ More contacts found (limited to top 5)</div>`;
+        }
+        
+        contactCard.appendChild(title);
+        contactCard.appendChild(list);
+        resultsSection.appendChild(contactCard);
+        delay += 0.1;
+      }
+
+      // 2.68 Keyword Density
+      if (data.keywords && data.keywords.length > 0) {
+        const keywordCard = document.createElement('div');
+        keywordCard.className = 'glass-panel category-card animate-fade-in';
+        keywordCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Content Keyword Density <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary))">SEO</span>`;
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.gap = '0.4rem';
+        
+        // Find the absolute highest count to scale the background opacity
+        const maxCount = data.keywords[0]?.count || 1;
+        
+        data.keywords.forEach(kw => {
+            const intensity = Math.max(0.1, (kw.count / maxCount) * 0.5); // Max opacity 50%
+            const badge = document.createElement('div');
+            badge.className = 'badge';
+            badge.style.background = `hsla(var(--text-primary), ${intensity})`;
+            badge.style.border = 'none';
+            badge.style.color = 'hsl(var(--text-primary))';
+            badge.style.display = 'flex';
+            badge.style.gap = '0.4rem';
+            badge.style.alignItems = 'center';
+            
+            badge.innerHTML = `<span>${kw.word}</span> <span style="font-size:0.7rem; opacity:0.7; background:hsla(0,0%,0%,0.3); padding:1px 4px; border-radius:4px;">${kw.count}</span>`;
+            list.appendChild(badge);
+        });
+        
+        keywordCard.appendChild(title);
+        keywordCard.appendChild(list);
+        resultsSection.appendChild(keywordCard);
+        delay += 0.1;
+      }
 
       // 2.7 SSL Certificate Card
       if (data.ssl) {

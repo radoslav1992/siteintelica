@@ -214,6 +214,56 @@ async function analyze(url) {
             }
         });
 
+        // --- Custom Contact Intelligence Extraction ---
+        const contacts = { emails: [], phones: [] };
+        // 1. Check href attributes for direct mailto/tel protocols
+        $('a[href]').each((_, el) => {
+            const href = $(el).attr('href').toLowerCase();
+            if (href.startsWith('mailto:')) {
+                const email = href.replace('mailto:', '').split('?')[0].trim();
+                if (email && !contacts.emails.includes(email)) contacts.emails.push(email);
+            }
+            if (href.startsWith('tel:')) {
+                const phone = href.replace('tel:', '').trim();
+                if (phone && !contacts.phones.includes(phone)) contacts.phones.push(phone);
+            }
+        });
+
+        // 2. Fallback: lightweight regex on plain text for emails just in case there are no mailto tags
+        const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+        const bodyText = $('body').text();
+        const foundEmails = bodyText.match(emailRegex);
+        if (foundEmails) {
+            foundEmails.forEach(email => {
+                const cleanEmail = email.toLowerCase().trim();
+                // Filter out common false positives like image filenames ending in @2x.png
+                if (!cleanEmail.match(/\.(png|jpe?g|gif|webp|svg)$/i) && !contacts.emails.includes(cleanEmail)) {
+                    contacts.emails.push(cleanEmail);
+                }
+            });
+        }
+
+        // --- Custom Keyword Density Analyzer ---
+        const stopWords = new Set(['the', 'and', 'a', 'an', 'to', 'of', 'for', 'in', 'on', 'with', 'is', 'at', 'by', 'this', 'that', 'it', 'or', 'as', 'be', 'are', 'we', 'you', 'your', 'our', 'from', 'can', 'has', 'how']);
+        const wordCounts = {};
+
+        // Extract text only from meaningful tags
+        const contentText = $('h1, h2, h3, h4, p, li, span, a').text().toLowerCase();
+        // Extract strictly alphabetic words 3+ characters long
+        const words = contentText.match(/[a-z]{3,}/g) || [];
+
+        words.forEach(word => {
+            if (!stopWords.has(word)) {
+                wordCounts[word] = (wordCounts[word] || 0) + 1;
+            }
+        });
+
+        // Sort and slice top 10
+        const keywords = Object.keys(wordCounts)
+            .map(word => ({ word, count: wordCounts[word] }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
         // --- Extranal Discovery (Ads, Robots, Sitemap) ---
         // Fast HEAD request to check for existence of files without downloading their whole content
         const discoverFiles = async () => {
@@ -241,7 +291,9 @@ async function analyze(url) {
             seo: seo,
             security: securityHeaders,
             architecture: architecture,
-            discovery: discovery
+            discovery: discovery,
+            contacts: contacts,
+            keywords: keywords
         }));
 
     } catch (error) {
