@@ -41,6 +41,7 @@ const currentPath = Astro.url.pathname;
           </a>
           <div class="nav-links">
             <a href="/" class={`nav-link ${currentPath === '/' ? 'active' : ''}`}>Spy Tool</a>
+            <a href="/blog" class={`nav-link ${currentPath.startsWith('/blog') ? 'active' : ''}`}>Blog</a>
             <a href="/about" class={`nav-link ${currentPath === '/about' ? 'active' : ''}`}>About</a>
             <a href="/knowledge" class={`nav-link ${currentPath === '/knowledge' ? 'active' : ''}`}>Knowledge</a>
           </div>
@@ -57,6 +58,7 @@ const currentPath = Astro.url.pathname;
             &copy; {new Date().getFullYear()} SiteIntelica. All rights reserved.
           </div>
           <div class="footer-links">
+            <a href="/blog" class="footer-link">Blog</a>
             <a href="/about" class="footer-link">About</a>
             <a href="/knowledge" class="footer-link">Knowledge Base</a>
             <a href="/privacy" class="footer-link">Privacy Policy</a>
