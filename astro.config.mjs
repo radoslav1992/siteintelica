@@ -10,6 +10,9 @@ export default defineConfig({
   site: 'https://siteintelica.com',
   output: 'server',
   integrations: [sitemap()],
+  security: {
+    checkOrigin: false
+  },
   adapter: node({
     mode: 'standalone'
   })
