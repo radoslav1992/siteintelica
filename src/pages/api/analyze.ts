@@ -157,6 +157,31 @@ export const POST: APIRoute = async ({ request }) => {
       console.error("Whois Error:", e.message);
     }
 
+    // 4.6 Calculate Tech Stack Diff
+    let historicalDiff = null;
+    if (previousScan && previousScan.data) {
+      try {
+        const oldData = previousScan.data;
+        if (oldData.technologies && parsedData.technologies) {
+          const oldTechs = oldData.technologies.map((t: any) => t.name);
+          const newTechs = parsedData.technologies.map((t: any) => t.name);
+
+          const addedTech = newTechs.filter((t: string) => !oldTechs.includes(t));
+          const removedTech = oldTechs.filter((t: string) => !newTechs.includes(t));
+
+          if (addedTech.length > 0 || removedTech.length > 0) {
+            historicalDiff = {
+              lastScanDate: previousScan.scannedAt,
+              added: addedTech,
+              removed: removedTech
+            };
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse previous scan data for diffing", e);
+      }
+    }
+
     // 5. Compile final data payload
     const enhancedData = {
       ...parsedData,
@@ -164,7 +189,8 @@ export const POST: APIRoute = async ({ request }) => {
       performance: performance,
       ssl: sslInfo,
       whois: whoisInfo,
-      historicalTimestamp: previousScan ? previousScan.scannedAt : null
+      historicalTimestamp: previousScan ? previousScan.scannedAt : null,
+      historicalDiff: historicalDiff
     };
 
     // 5. Persist to History Database

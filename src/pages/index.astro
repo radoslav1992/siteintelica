@@ -276,6 +276,45 @@ const schemaData = {
 
       let delay = 0;
 
+      // 0. Historical Tech Stack Diff Card
+      if (data.historicalDiff && (data.historicalDiff.added.length > 0 || data.historicalDiff.removed.length > 0)) {
+        const diffCard = document.createElement('div');
+        diffCard.className = 'glass-panel category-card animate-fade-in';
+        diffCard.style.animationDelay = `${delay}s`;
+        diffCard.style.borderLeft = '3px solid hsl(var(--accent-primary))';
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Timeline Changes <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary))">INTELLIGENCE</span>`;
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        list.style.gap = '0.5rem';
+        
+        const lastDate = new Date(data.historicalDiff.lastScanDate + ' Z').toLocaleDateString();
+        list.innerHTML += `<div style="font-size:0.8rem; color:hsl(var(--text-secondary)); margin-bottom:0.5rem;">Changes detected since last scan on ${lastDate}:</div>`;
+        
+        data.historicalDiff.added.forEach(tech => {
+            list.innerHTML += `<div style="display:flex; align-items:center; gap:0.5rem; color:#00e676; font-weight:600; font-size:0.9rem;">
+                <div style="width:18px; height:18px; border-radius:50%; background:rgba(0,230,118,0.1); display:flex; align-items:center; justify-content:center;">+</div>
+                Detected ${tech}
+            </div>`;
+        });
+        
+        data.historicalDiff.removed.forEach(tech => {
+            list.innerHTML += `<div style="display:flex; align-items:center; gap:0.5rem; color:#ff4b4b; font-weight:600; font-size:0.9rem; opacity:0.8;">
+                <div style="width:18px; height:18px; border-radius:50%; background:rgba(255,75,75,0.1); display:flex; align-items:center; justify-content:center;">-</div>
+                Removed ${tech}
+            </div>`;
+        });
+        
+        diffCard.appendChild(title);
+        diffCard.appendChild(list);
+        resultsSection.appendChild(diffCard);
+        delay += 0.1;
+      }
+
       // 1. Social Links Card
       if (data.socials && data.socials.length > 0) {
         const socialCard = document.createElement('div');
