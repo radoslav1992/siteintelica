@@ -11,10 +11,13 @@
   "dependencies": {
     "@astrojs/node": "^9.5.4",
     "@astrojs/sitemap": "^3.7.0",
+    "@lucia-auth/adapter-sqlite": "^3.0.2",
     "astro": "^5.17.1",
     "better-sqlite3": "^12.6.2",
     "cheerio": "^1.2.0",
+    "lucia": "^3.2.2",
     "node-fetch": "^3.3.2",
+    "oslo": "^1.2.1",
     "wapalyzer-core": "^6.11.0"
   },
   "devDependencies": {

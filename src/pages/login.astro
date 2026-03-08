@@ -1,0 +1,66 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+if (Astro.locals.user) {
+	return Astro.redirect("/dashboard");
+}
+---
+
+<Layout title="Login | SiteIntelica">
+  <div class="container pt-24 pb-24 auth-wrapper">
+    <div class="glass-panel p-2 animate-fade-in" style="max-width: 400px; margin: 0 auto; padding: 2rem;">
+      <h1 class="text-3xl font-extrabold mb-2 text-center text-gradient">Welcome back</h1>
+      <p class="text-secondary text-center mb-8 text-sm">Sign in to your SiteIntelica account.</p>
+
+      <form method="post" action="/api/auth/login" class="auth-form" id="loginForm">
+        <label for="email" class="text-sm font-semibold mb-1 block">Email</label>
+        <input type="email" name="email" id="email" class="search-input mb-4" style="width:100%; padding:0.75rem; font-size:1rem;" required />
+        
+        <label for="password" class="text-sm font-semibold mb-1 block">Password</label>
+        <input type="password" name="password" id="password" class="search-input mb-6" style="width:100%; padding:0.75rem; font-size:1rem;" required />
+        
+        <div id="error-message" class="text-sm mb-4 hidden" style="color: #ff4b4b; background: rgba(255, 75, 75, 0.1); padding: 0.5rem; border-radius: 4px; text-align: center;"></div>
+        
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Sign In</button>
+      </form>
+
+      <p class="text-center text-sm mt-6 text-secondary">
+        Don't have an account? <a href="/register" style="color: hsl(var(--accent-primary)); text-decoration: none;">Create one</a>
+      </p>
+    </div>
+  </div>
+
+  <style>
+    .auth-wrapper {
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+
+  <script>
+    const form = document.getElementById("loginForm") as HTMLFormElement;
+    const errorMessage = document.getElementById("error-message");
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const response = await fetch(form.action, {
+            method: form.method,
+            body: formData,
+            redirect: 'manual'
+        });
+
+        if (response.type === 'opaqueredirect' || response.status === 302 || response.redirected) {
+             window.location.href = response.url || '/dashboard';
+        } else if (!response.ok) {
+            const data = await response.json();
+            if (errorMessage) {
+              errorMessage.textContent = data.error || "An error occurred.";
+              errorMessage.classList.remove("hidden");
+            }
+        }
+    });
+  </script>
+</Layout>

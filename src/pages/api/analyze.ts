@@ -2,12 +2,28 @@ import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
-import { saveScan, getLastScan } from '../../db/client';
+import db, { saveScan, getLastScan } from '../../db/client';
 
 const execAsync = promisify(exec);
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
+  const request = context.request;
+
+  // 0. API Key Authentication (SaaS Programmatic Access)
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const apiKey = authHeader.substring(7);
+    const stmt = db.prepare("SELECT id FROM user WHERE api_key = ?");
+    const user = stmt.get(apiKey);
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Invalid or inactive API Key." }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
   try {
     const data = await request.json();
     const url = data.url;

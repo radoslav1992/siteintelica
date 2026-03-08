@@ -55,6 +55,22 @@ const currentPath = Astro.url.pathname;
             <a href="/blog" class={`nav-link ${currentPath.startsWith('/blog') ? 'active' : ''}`}>Blog</a>
             <a href="/about" class={`nav-link ${currentPath === '/about' ? 'active' : ''}`}>About</a>
             <a href="/knowledge" class={`nav-link ${currentPath === '/knowledge' ? 'active' : ''}`}>Knowledge</a>
+            
+            <div class="auth-buttons" style="display: flex; gap: 0.5rem; margin-left: 1rem; padding-left: 1rem; border-left: 1px solid rgba(255,255,255,0.1);">
+              {Astro.locals.user ? (
+                <>
+                  <a href="/dashboard" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Dashboard</a>
+                  <form method="post" action="/api/auth/logout">
+                    <button class="nav-btn" style="padding: 0.4rem 1rem; font-size: 0.9rem; background: rgba(255, 75, 75, 0.1); color: #ff4b4b;">Log Out</button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <a href="/login" class="nav-btn" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Log In</a>
+                  <a href="/register" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Sign Up</a>
+                </>
+              )}
+            </div>
           </div>
         </nav>
       </header>

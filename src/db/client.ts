@@ -14,6 +14,20 @@ db.exec(`
     scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_domain ON scans(domain);
+
+  CREATE TABLE IF NOT EXISTS user (
+    id TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    hashed_password TEXT NOT NULL,
+    api_key TEXT UNIQUE
+  );
+
+  CREATE TABLE IF NOT EXISTS session (
+    id TEXT NOT NULL PRIMARY KEY,
+    expires_at INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user(id)
+  );
 `);
 
 export function saveScan(domain: string, data: any) {
