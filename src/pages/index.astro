@@ -309,8 +309,8 @@ const schemaData = {
       .orb { opacity: 0.1; }
     }
 
-    /* Report sections — accordion style */
-    .report-section {
+    /* Report sections — accordion style (`:global` needed: elements created by JS) */
+    :global(.report-section) {
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: var(--radius-lg);
       overflow: hidden;
@@ -318,11 +318,11 @@ const schemaData = {
       transition: border-color 0.3s ease;
     }
 
-    .report-section:hover {
+    :global(.report-section:hover) {
       border-color: rgba(255, 255, 255, 0.1);
     }
 
-    .report-section > summary {
+    :global(.report-section > summary) {
       display: flex;
       align-items: center;
       gap: 0.75rem;
@@ -336,18 +336,45 @@ const schemaData = {
       transition: background 0.2s ease;
     }
 
-    .report-section > summary::marker,
-    .report-section > summary::-webkit-details-marker {
-      display: none;
-      content: '';
+    :global(.report-section > summary::marker),
+    :global(.report-section > summary::-webkit-details-marker) {
+      display: none !important;
+      content: '' !important;
     }
 
-    .report-section > summary:hover {
+    :global(.report-section > summary:hover) {
       background: rgba(255, 255, 255, 0.025);
     }
 
-    .report-section > summary .section-chevron {
+    :global(.report-section .section-label) {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+
+    :global(.report-section .section-badge) {
+      font-size: 0.6rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: hsla(var(--accent-warm), 0.12);
+      color: hsl(var(--accent-warm));
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    :global(.report-section .section-count) {
+      font-size: 0.72rem;
+      color: hsl(var(--text-muted));
+      font-weight: 500;
       margin-left: auto;
+      margin-right: 0.5rem;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    :global(.report-section .section-chevron) {
       width: 22px;
       height: 22px;
       min-width: 22px;
@@ -364,7 +391,7 @@ const schemaData = {
       overflow: hidden;
     }
 
-    .report-section > summary .section-chevron svg {
+    :global(.report-section .section-chevron svg) {
       width: 12px;
       height: 12px;
       min-width: 12px;
@@ -377,47 +404,20 @@ const schemaData = {
       display: block;
     }
 
-    .report-section[open] > summary .section-chevron {
+    :global(.report-section[open] > summary .section-chevron) {
       transform: rotate(90deg);
       background: hsla(var(--accent-primary), 0.12);
     }
 
-    .report-section[open] > summary .section-chevron svg {
+    :global(.report-section[open] > summary .section-chevron svg) {
       stroke: hsl(var(--accent-primary));
     }
 
-    .report-section[open] > summary {
+    :global(.report-section[open] > summary) {
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
-    .report-section .section-label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .report-section .section-badge {
-      font-size: 0.6rem;
-      padding: 2px 8px;
-      border-radius: 99px;
-      background: hsla(var(--accent-warm), 0.12);
-      color: hsl(var(--accent-warm));
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      flex-shrink: 0;
-    }
-
-    .report-section .section-count {
-      font-size: 0.72rem;
-      color: hsl(var(--text-muted));
-      font-weight: 500;
-      margin-left: auto;
-      margin-right: 0.5rem;
-      flex-shrink: 0;
-    }
-
-    /* Section body — single column stack with smooth animation */
-    .report-section .section-body {
+    :global(.report-section .section-body) {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -426,23 +426,16 @@ const schemaData = {
     }
 
     @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Cards within sections get subtle left accent on hover */
-    .report-section .section-body > .glass-panel {
+    :global(.report-section .section-body > .glass-panel) {
       transition: border-color 0.2s ease, transform 0.15s ease;
       border-left: 3px solid transparent;
     }
 
-    .report-section .section-body > .glass-panel:hover {
+    :global(.report-section .section-body > .glass-panel:hover) {
       border-left-color: hsla(var(--accent-primary), 0.4);
       transform: translateX(2px);
     }
