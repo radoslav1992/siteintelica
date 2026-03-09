@@ -906,6 +906,149 @@ const schemaData = {
         delay += 0.1;
       }
 
+      // ── BUSINESS INTELLIGENCE CARDS (Premium) ──
+      if (data.isPremium && data.businessMetrics) {
+        const bm = data.businessMetrics;
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+
+        // Estimated Monthly Visitors
+        if (bm.estimatedMonthlyVisitors) {
+          const tmv = bm.estimatedMonthlyVisitors;
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.style.animationDelay = `${delay}s`;
+          card.style.borderLeft = '3px solid #FFD700';
+          card.innerHTML = `
+            <h3 class="category-title">📈 Est. Monthly Visitors ${premBadge}</h3>
+            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem;">
+              <div style="font-size:1.8rem; font-weight:800; color:hsl(var(--accent-primary));">${tmv.low.toLocaleString()} — ${tmv.high.toLocaleString()}</div>
+            </div>
+            <div style="font-size:0.78rem; color:hsl(var(--text-secondary));">Confidence: <span class="badge">${tmv.confidence}</span></div>
+            <div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">Based on sitemap size, performance, SEO score, and tech stack complexity.</div>
+          `;
+          resultsSection.appendChild(card);
+          delay += 0.1;
+        }
+
+        // Domain Authority Score
+        if (bm.domainAuthority) {
+          const da = bm.domainAuthority;
+          const daColor = da.score >= 70 ? '#00e676' : da.score >= 40 ? '#ffa726' : '#ff4b4b';
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.style.animationDelay = `${delay}s`;
+          card.style.borderLeft = '3px solid #FFD700';
+          let factorsHtml = da.factors.map(f => {
+            const pct = Math.round((f.score / f.max) * 100);
+            const barColor = pct >= 70 ? '#00e676' : pct >= 40 ? '#ffa726' : '#ff4b4b';
+            return `<div style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
+                <span>${f.name}</span><span style="color:${barColor};">${f.score}/${f.max}</span>
+              </div>
+              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="height:100%; width:${pct}%; background:${barColor}; border-radius:3px; transition:width 0.5s;"></div>
+              </div>
+            </div>`;
+          }).join('');
+          card.innerHTML = `
+            <h3 class="category-title">🏆 Domain Authority ${premBadge}</h3>
+            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem;">
+              <div style="width:56px; height:56px; border-radius:12px; background:${daColor}22; border:2px solid ${daColor}; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:800; color:${daColor};">${da.score}</div>
+              <div style="font-size:0.8rem; color:hsl(var(--text-secondary));">out of 100</div>
+            </div>
+            <div>${factorsHtml}</div>
+          `;
+          resultsSection.appendChild(card);
+          delay += 0.1;
+        }
+
+        // Tech Stack Monthly Cost
+        if (bm.techStackCost && bm.techStackCost.breakdown.length > 0) {
+          const tc = bm.techStackCost;
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.style.animationDelay = `${delay}s`;
+          card.style.borderLeft = '3px solid #FFD700';
+          let rows = tc.breakdown.map(t => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid hsla(var(--text-primary), 0.05); font-size:0.78rem;">
+              <div><strong>${t.name}</strong> <span style="color:hsl(var(--text-secondary)); font-size:0.7rem;">${t.label}</span></div>
+              <div style="white-space:nowrap; color:#00e676;">$${t.min}${t.max > t.min ? `–$${t.max}` : ''}</div>
+            </div>`).join('');
+          card.innerHTML = `
+            <h3 class="category-title">💰 Tech Stack Cost ${premBadge}</h3>
+            <div style="display:flex; align-items:baseline; gap:0.5rem; margin-bottom:0.75rem;">
+              <span style="font-size:1.4rem; font-weight:800; color:hsl(var(--accent-primary));">$${tc.totalMin.toLocaleString()} — $${tc.totalMax.toLocaleString()}</span>
+              <span style="font-size:0.75rem; color:hsl(var(--text-secondary));">/month</span>
+            </div>
+            <div>${rows}</div>
+          `;
+          resultsSection.appendChild(card);
+          delay += 0.1;
+        }
+
+        // Hosting Cost
+        if (bm.hostingCost) {
+          const hc = bm.hostingCost;
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.style.animationDelay = `${delay}s`;
+          card.style.borderLeft = '3px solid #FFD700';
+          card.innerHTML = `
+            <h3 class="category-title">🖥️ Hosting Estimate ${premBadge}</h3>
+            <div style="display:flex; align-items:baseline; gap:0.5rem; margin-bottom:0.5rem;">
+              <span style="font-size:1.4rem; font-weight:800; color:hsl(var(--accent-primary));">$${hc.min} — $${hc.max}</span>
+              <span style="font-size:0.75rem; color:hsl(var(--text-secondary));">/month</span>
+            </div>
+            <div style="font-size:0.8rem;">Provider: <strong>${hc.provider}</strong></div>
+          `;
+          resultsSection.appendChild(card);
+          delay += 0.1;
+        }
+
+        // Carbon Footprint
+        if (bm.carbonFootprint) {
+          const cf = bm.carbonFootprint;
+          const cfColor = cf.grams <= 1.0 ? '#00e676' : cf.grams <= 1.76 ? '#ffa726' : '#ff4b4b';
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.style.animationDelay = `${delay}s`;
+          card.style.borderLeft = `3px solid ${cfColor}`;
+          card.innerHTML = `
+            <h3 class="category-title">🌱 Carbon Footprint ${premBadge}</h3>
+            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem;">
+              <div style="width:52px; height:52px; border-radius:10px; background:${cfColor}22; border:2px solid ${cfColor}; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:800; color:${cfColor};">${cf.grams}g</div>
+              <div>
+                <div style="font-size:0.85rem; font-weight:600;">CO₂ per page visit</div>
+                <div style="font-size:0.7rem; color:hsl(var(--text-secondary));">${cf.rating}</div>
+              </div>
+            </div>
+            <div style="font-size:0.78rem;">🌳 Needs <strong>${cf.trees} tree${cf.trees > 1 ? 's' : ''}</strong>/year to offset</div>
+          `;
+          resultsSection.appendChild(card);
+          delay += 0.1;
+        }
+
+        // Ad Revenue Estimate
+        if (bm.adRevenueEstimate) {
+          const ar = bm.adRevenueEstimate;
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.style.animationDelay = `${delay}s`;
+          card.style.borderLeft = '3px solid #FFD700';
+          card.innerHTML = `
+            <h3 class="category-title">💵 Ad Revenue Estimate ${premBadge}</h3>
+            <div style="display:flex; align-items:baseline; gap:0.5rem; margin-bottom:0.5rem;">
+              <span style="font-size:1.4rem; font-weight:800; color:#00e676;">$${ar.monthlyMin.toLocaleString()} — $${ar.monthlyMax.toLocaleString()}</span>
+              <span style="font-size:0.75rem; color:hsl(var(--text-secondary));">/month</span>
+            </div>
+            <div style="font-size:0.8rem; margin-bottom:0.5rem;">Networks: ${ar.networks.map(n => `<span class="badge" style="font-size:0.7rem;">${n}</span>`).join(' ')}</div>
+            <div style="font-size:0.7rem; color:hsl(var(--text-secondary));">Based on estimated traffic × average display ad CPM ($1–$5).</div>
+          `;
+          resultsSection.appendChild(card);
+          delay += 0.1;
+        }
+      }
+
       // ── AHREFS-STYLE SEO CARDS (Premium) ──
 
       // robots.txt & Sitemap Card

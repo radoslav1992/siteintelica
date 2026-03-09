@@ -6,6 +6,7 @@ import db, { saveScan, getLastScan, getRecentScans } from '../../db/client';
 import { enumerateSubdomains } from '../../utils/subdomain-enum';
 import { calculateSecurityGrade } from '../../utils/security-grade';
 import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks } from '../../utils/seo-tools';
+import { calculateBusinessMetrics } from '../../utils/business-intel';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -312,7 +313,17 @@ export const POST: APIRoute = async (context) => {
       outboundLinks: isPremium ? outboundLinks : null,
       brokenLinks: isPremium ? brokenLinks : null,
       securityGrade,
-      isPremium
+      isPremium,
+      businessMetrics: isPremium ? calculateBusinessMetrics({
+        technologies: parsedData?.technologies,
+        performance,
+        securityGrade,
+        sitemapData,
+        seoAudit,
+        readability,
+        trackers: parsedData?.trackers,
+        seo: parsedData?.seo
+      }) : null
     };
 
     // 5. Persist to History Database
