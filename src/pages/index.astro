@@ -21,32 +21,53 @@ const schemaData = {
   <script is:inline type="application/ld+json" set:html={JSON.stringify(schemaData)} />
   <div class="container">
     <header class="hero text-center pt-24 pb-16">
-      <h1 class="text-gradient text-5xl md:text-7xl font-extrabold mb-4 tracking-tight">SiteIntelica</h1>
-      <p class="text-xl md:text-2xl text-secondary max-w-2xl mx-auto mb-12">
-        X-Ray any website. Reveal exactly how it's built and how it makes money.
-      </p>
+      <!-- Animated background orbs -->
+      <div class="hero-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+      </div>
       
-      <form id="analyze-form" class="input-group glass-panel p-2">
-        <input 
-          type="url" 
-          id="url-input" 
-          class="search-input" 
-          placeholder="Enter competitor URL (e.g., https://stripe.com)" 
-          required 
-          pattern="https?://.*"
-        />
-        <button type="submit" id="submit-btn" class="btn-primary">
-          <span id="btn-text">Analyze</span>
-          <span id="btn-loader" class="loader" style="display: none;"></span>
+      <div style="position:relative; z-index:2;">
+        <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.2); border-radius:99px; padding:0.35rem 1rem; font-size:0.8rem; color:#FFD700; font-weight:600; margin-bottom:1.5rem;">
+          ✦ Trusted by 1,000+ developers & marketers
+        </div>
+
+        <h1 class="text-gradient text-5xl md:text-7xl font-extrabold mb-4 tracking-tight">SiteIntelica</h1>
+        <p class="text-xl md:text-2xl text-secondary max-w-2xl mx-auto" style="margin-bottom:1.5rem;">
+          X-Ray any website. Reveal exactly how it's built and how it makes money.
+        </p>
+
+        <!-- Feature pills row -->
+        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:0.5rem; margin-bottom:2rem;">
+          <span class="feature-pill">🔍 Tech Stack</span>
+          <span class="feature-pill">🛡️ Security Grade</span>
+          <span class="feature-pill">🤖 AI Analysis</span>
+          <span class="feature-pill">📊 SEO & DNS</span>
+          <span class="feature-pill">⚡ Performance</span>
+        </div>
+        
+        <form id="analyze-form" class="input-group glass-panel p-2" style="max-width:600px; margin:0 auto;">
+          <input 
+            type="url" 
+            id="url-input" 
+            class="search-input" 
+            placeholder="Enter competitor URL (e.g., https://stripe.com)" 
+            required 
+            pattern="https?://.*"
+          />
+          <button type="submit" id="submit-btn" class="btn-primary">
+            <span id="btn-text">Analyze</span>
+            <span id="btn-loader" class="loader" style="display: none;"></span>
+          </button>
+        </form>
+        <div id="error-message" class="text-red-500 mt-4 text-sm hidden" style="color: #ff4b4b;"></div>
+        <div id="history-message" class="text-secondary mt-2 text-sm hidden"></div>
+        
+        <button id="download-pdf-btn" class="glass-panel text-sm hidden" style="margin-top:1.5rem; padding:0.5rem 1rem; cursor:pointer; font-family:'Outfit'; font-weight:600; color:hsl(var(--text-primary)); display:inline-flex; align-items:center; gap:0.5rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download PDF Report
         </button>
-      </form>
-      <div id="error-message" class="text-red-500 mt-4 text-sm hidden" style="color: #ff4b4b;"></div>
-      <div id="history-message" class="text-secondary mt-2 text-sm hidden"></div>
-      
-      <button id="download-pdf-btn" class="glass-panel text-sm hidden" style="margin-top:1.5rem; padding:0.5rem 1rem; cursor:pointer; font-family:'Outfit'; font-weight:600; color:hsl(var(--text-primary)); display:inline-flex; align-items:center; gap:0.5rem;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Download PDF Report
-      </button>
+      </div>
     </header>
 
     <section id="results-section" class="results-grid hidden pb-24">
@@ -97,13 +118,72 @@ const schemaData = {
 
   <style>
     .hero {
-      min-height: 40vh;
+      min-height: 50vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      position: relative;
+      overflow: hidden;
     }
     
+    /* Animated background orbs */
+    .hero-orbs {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.3;
+    }
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: hsl(var(--accent-primary));
+      top: -100px;
+      right: -100px;
+      animation: orbit1 12s ease-in-out infinite;
+    }
+    .orb-2 {
+      width: 350px;
+      height: 350px;
+      background: hsl(var(--accent-secondary));
+      bottom: -120px;
+      left: -80px;
+      animation: orbit2 15s ease-in-out infinite;
+    }
+    @keyframes orbit1 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(-60px, 60px); }
+    }
+    @keyframes orbit2 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(50px, -50px); }
+    }
+
+    /* Feature pills */
+    .feature-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: hsl(var(--text-secondary));
+      background: hsla(var(--text-primary), 0.06);
+      border: 1px solid hsla(var(--text-primary), 0.08);
+      transition: all 0.3s ease;
+    }
+    .feature-pill:hover {
+      color: hsl(var(--text-primary));
+      border-color: hsl(var(--accent-primary));
+      background: hsla(var(--accent-primary), 0.1);
+    }
+
     .text-center { text-align: center; }
     .pt-24 { padding-top: 6rem; }
     .pb-16 { padding-bottom: 4rem; }
@@ -165,6 +245,7 @@ const schemaData = {
       .results-grid {
         grid-template-columns: 1fr;
       }
+      .orb { opacity: 0.15; }
     }
   </style>
 
@@ -750,7 +831,7 @@ const schemaData = {
         
         const title = document.createElement('h3');
         title.className = 'category-title';
-        title.innerHTML = `Ad Trackers & Pixels <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-secondary), 0.2); color:hsl(var(--acceny-secondary))">PREMIUM</span>`;
+        title.innerHTML = `Ad Trackers & Pixels <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
         
         const list = document.createElement('div');
         list.className = 'tech-list';
@@ -778,7 +859,7 @@ const schemaData = {
         
         const title = document.createElement('h3');
         title.className = 'category-title';
-        title.innerHTML = `Discovered Subdomains <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(25, 100%, 50%, 0.2); color:#ffa726">PREMIUM</span>`;
+        title.innerHTML = `Discovered Subdomains <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
         
         const list = document.createElement('div');
         list.className = 'tech-list';
@@ -806,7 +887,7 @@ const schemaData = {
         
         const title = document.createElement('h3');
         title.className = 'category-title';
-        title.innerHTML = `Exposed Network Ports <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(350, 100%, 60%, 0.2); color:#ff4b4b">PREMIUM DANGER</span>`;
+        title.innerHTML = `Exposed Network Ports <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
         
         const list = document.createElement('div');
         list.className = 'tech-list';
@@ -834,7 +915,7 @@ const schemaData = {
         aiCard.style.borderTop = '3px solid hsl(var(--accent-primary))';
         
         aiCard.innerHTML = `
-          <h3 class="category-title">🤖 AI Intelligence Suite <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary))">PREMIUM</span></h3>
+          <h3 class="category-title">🤖 AI Intelligence Suite <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span></h3>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-top:0.75rem;">
             <button id="btnAiSummary" style="padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--text-primary), 0.15); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='hsl(var(--accent-primary))'" onmouseout="this.style.borderColor='hsla(var(--text-primary), 0.15)'">
               📊 Executive Summary
