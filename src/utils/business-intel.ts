@@ -105,8 +105,8 @@ export interface BusinessMetrics {
 
 export function calculateBusinessMetrics(data: any, trancoRank: number | null = null): BusinessMetrics {
     const techs: string[] = (data.technologies || []).map((t: any) => t.name);
-    const perfScore = data.performance?.performanceScore ?? 50;
-    const seoScore = data.performance?.seoScore ?? 50;
+    const perfScore = data.performance?.score ?? data.performance?.performanceScore ?? 50;
+    const seoScore = data.performance?.seo ?? data.performance?.seoScore ?? 50;
     const secGrade = data.securityGrade;
     const sitemapCount = data.sitemapData?.urlCount ?? 0;
     const readability = data.readability;

@@ -7,7 +7,9 @@ import { enumerateSubdomains } from '../../utils/subdomain-enum';
 import { calculateSecurityGrade } from '../../utils/security-grade';
 import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks, extractStructuredData, extractSocialProfiles, scanCookies } from '../../utils/seo-tools';
 import { calculateBusinessMetrics } from '../../utils/business-intel';
+import { auditAccessibility } from '../../utils/accessibility';
 import { getTrancoRank, rankToTraffic } from '../../utils/tranco';
+import { checkRateLimit, recordUsage } from '../../utils/rate-limit';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -34,6 +36,21 @@ export const POST: APIRoute = async (context) => {
   // Also premium if logged in via browser
   if (context.locals.user) {
     isPremium = true;
+  }
+
+  // Rate limiting
+  const rateLimitId = context.locals.user?.id || authHeader?.substring(7) || 'anonymous';
+  const rateLimitType = authHeader ? 'api_key' as const : 'user_id' as const;
+  const rateCheck = checkRateLimit(rateLimitId, rateLimitType);
+  if (!rateCheck.allowed) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-RateLimit-Limit': rateCheck.limit.toString(),
+        'X-RateLimit-Remaining': '0',
+      }
+    });
   }
 
   try {
@@ -231,6 +248,7 @@ export const POST: APIRoute = async (context) => {
     let structuredData: any = null;
     let socialProfiles: any = null;
     let cookieData: any = null;
+    let accessibilityAudit: any = null;
 
     if (isPremium) {
       try {
@@ -280,6 +298,7 @@ export const POST: APIRoute = async (context) => {
               outboundLinks = extractOutboundLinks(html, domain);
               structuredData = extractStructuredData(html);
               socialProfiles = extractSocialProfiles(html);
+              accessibilityAudit = auditAccessibility(html);
 
               // Phase 3: Broken link check (slower, batched)
               try {
@@ -330,6 +349,7 @@ export const POST: APIRoute = async (context) => {
       structuredData: isPremium ? structuredData : null,
       socialProfiles: isPremium ? socialProfiles : null,
       cookieData: isPremium ? cookieData : null,
+      accessibilityAudit: isPremium ? accessibilityAudit : null,
       businessMetrics: isPremium ? calculateBusinessMetrics({
         technologies: parsedData?.technologies,
         performance,
@@ -342,8 +362,10 @@ export const POST: APIRoute = async (context) => {
       }, trancoRank) : null
     };
 
-    // 5. Persist to History Database
-    saveScan(domain, enhancedData);
+    // 5. Persist to History Database & record API usage
+    const userId = context.locals.user?.id ?? undefined;
+    saveScan(domain, enhancedData, userId);
+    recordUsage('/api/analyze', userId, authHeader?.substring(7));
 
     return new Response(JSON.stringify(enhancedData), {
       status: 200,

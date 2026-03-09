@@ -1,50 +1,112 @@
 import type { APIRoute } from 'astro';
+import db from '../../db/client';
 
 export const prerender = false;
 
+try { db.exec(`
+  CREATE TABLE IF NOT EXISTS watched_domains (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_checked DATETIME,
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    UNIQUE(user_id, domain)
+  );
+`); } catch {}
+
+export const GET: APIRoute = async (context) => {
+  const user = context.locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Authentication required.' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const stmt = db.prepare(`
+      SELECT wd.id, wd.domain, wd.created_at, wd.last_checked,
+             s.scan_data, s.scanned_at as last_scan_date
+      FROM watched_domains wd
+      LEFT JOIN scans s ON s.domain = wd.domain
+        AND s.scanned_at = (SELECT MAX(s2.scanned_at) FROM scans s2 WHERE s2.domain = wd.domain)
+      WHERE wd.user_id = ?
+      ORDER BY wd.created_at DESC
+    `);
+    const watchlist = stmt.all(user.id) as any[];
+
+    const result = watchlist.map(w => {
+      let techCount = 0;
+      let securityGrade = '?';
+      let perfScore = null;
+      if (w.scan_data) {
+        try {
+          const data = JSON.parse(w.scan_data);
+          techCount = (data.technologies || []).length;
+          securityGrade = data.securityGrade?.grade || '?';
+          perfScore = data.performance?.score ?? null;
+        } catch {}
+      }
+      return {
+        id: w.id,
+        domain: w.domain,
+        createdAt: w.created_at,
+        lastChecked: w.last_checked,
+        lastScanDate: w.last_scan_date,
+        techCount,
+        securityGrade,
+        perfScore,
+      };
+    });
+
+    return new Response(JSON.stringify({ watchlist: result }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
 export const POST: APIRoute = async (context) => {
-    const user = context.locals.user;
+  const user = context.locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Authentication required.' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
-    if (!user) {
-        return new Response(JSON.stringify({ error: "Unauthorized. Premium account required for Alerts." }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        });
+  try {
+    const { domain, action } = await context.request.json();
+    if (!domain) {
+      return new Response(JSON.stringify({ error: 'Domain is required.' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    try {
-        const data = await context.request.json();
-        const url = data.url;
-
-        if (!url || typeof url !== 'string' || !url.startsWith('http')) {
-            return new Response(JSON.stringify({ error: 'Invalid URL provided. Please include http:// or https://' }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        // --- PLACEHOLDER LOGIC ---
-        // In production, this would add a row to a `watched_competitors` table.
-        // A daily Cron job would iterate through that table, scan the site, and if the JSON 
-        // payload diffs significantly from the last run, it triggers an email alert.
-
-        return new Response(JSON.stringify({
-            message: 'Competitor added to watch queue.',
-            domain: new URL(url).hostname,
-            status: 'monitoring_active',
-            info: 'This is a roadmap placeholder. The daily cron scanning engine will be implemented in a future update.'
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-    } catch (error: any) {
-        console.error('Monitor Alert Error:', error);
-        return new Response(JSON.stringify({
-            error: 'Failed to watch competitor: ' + (error.message || 'Unknown server error')
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+    if (action === 'remove') {
+      db.prepare('DELETE FROM watched_domains WHERE user_id = ? AND domain = ?').run(user.id, domain);
+      return new Response(JSON.stringify({ success: true, message: 'Removed from watchlist.' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
+
+    const existing = db.prepare('SELECT COUNT(*) as count FROM watched_domains WHERE user_id = ?').get(user.id) as { count: number };
+    if (existing.count >= 20) {
+      return new Response(JSON.stringify({ error: 'Maximum 20 watched domains allowed.' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    db.prepare('INSERT OR IGNORE INTO watched_domains (user_id, domain) VALUES (?, ?)').run(user.id, domain);
+
+    return new Response(JSON.stringify({ success: true, message: `Now watching ${domain}.` }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    });
+  }
 };

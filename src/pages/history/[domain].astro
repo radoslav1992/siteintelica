@@ -1,0 +1,212 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getScanHistory } from '../../db/client';
+import { calculateSecurityGrade } from '../../utils/security-grade';
+
+export const prerender = false;
+
+const { domain } = Astro.params;
+if (!domain) return Astro.redirect('/history');
+
+const rawHistory = getScanHistory(domain, 30);
+const history = rawHistory.map(row => {
+  const data = JSON.parse(row.scan_data);
+  const techs = (data.technologies || []).map((t: any) => t.name);
+  const secGrade = calculateSecurityGrade(data.security);
+  return {
+    date: row.scanned_at,
+    perfScore: data.performance?.score ?? null,
+    seoScore: data.performance?.seo ?? null,
+    accessScore: data.performance?.accessibility ?? null,
+    securityGrade: secGrade.grade,
+    securityScore: secGrade.score,
+    techCount: techs.length,
+    technologies: techs,
+  };
+}).reverse();
+
+function buildDiffs(scans: typeof history) {
+  return scans.slice(1).map((scan, i) => {
+    const prev = scans[i];
+    const added = scan.technologies.filter((t: string) => !prev.technologies.includes(t));
+    const removed = prev.technologies.filter((t: string) => !scan.technologies.includes(t));
+    return { date: scan.date, added, removed };
+  }).filter(d => d.added.length > 0 || d.removed.length > 0);
+}
+
+const diffs = buildDiffs(history);
+---
+
+<Layout title={`Scan History — ${domain}`} description={`View the full scan history and tech stack evolution for ${domain}.`}>
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Scan Timeline</h1>
+      <p class="text-secondary text-lg">
+        <img src={`https://logo.clearbit.com/${domain}`} width="20" height="20" style="border-radius:4px; vertical-align:middle; margin-right:6px;" onerror="this.style.display='none'" />
+        <strong style="color:hsl(var(--text-primary))">{domain}</strong> — {history.length} scan{history.length !== 1 ? 's' : ''} on record
+      </p>
+    </header>
+
+    {history.length === 0 ? (
+      <div class="glass-panel" style="padding:2rem; text-align:center;">
+        <p class="text-secondary">No scan history found for this domain. <a href={`/?scan=https://${domain}`} style="color:hsl(var(--accent-primary));">Scan it now</a></p>
+      </div>
+    ) : (
+      <div class="timeline-wrapper">
+        <div class="score-chart glass-panel animate-fade-in">
+          <h2 class="section-title">Performance Over Time</h2>
+          <div class="chart-container" id="chartContainer">
+            <canvas id="scoreChart" height="220"></canvas>
+          </div>
+        </div>
+
+        {diffs.length > 0 && (
+          <div class="glass-panel animate-fade-in" style="padding:1.5rem; animation-delay:0.05s;">
+            <h2 class="section-title">Tech Stack Changes</h2>
+            <div class="diff-list">
+              {diffs.map(d => (
+                <div class="diff-entry">
+                  <span class="diff-date">{new Date(d.date + ' Z').toLocaleDateString()}</span>
+                  <div class="diff-changes">
+                    {d.added.map(t => <span class="diff-added">+ {t}</span>)}
+                    {d.removed.map(t => <span class="diff-removed">- {t}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div class="glass-panel animate-fade-in" style="padding:1.5rem; animation-delay:0.1s;">
+          <h2 class="section-title">All Scans</h2>
+          <div class="scans-table">
+            <div class="scan-row scan-header">
+              <span>Date</span>
+              <span>Perf</span>
+              <span>SEO</span>
+              <span>Security</span>
+              <span>Techs</span>
+            </div>
+            {history.slice().reverse().map(scan => (
+              <div class="scan-row">
+                <span class="scan-date">{new Date(scan.date + ' Z').toLocaleString()}</span>
+                <span class={`score ${(scan.perfScore ?? 0) >= 80 ? 'good' : (scan.perfScore ?? 0) >= 50 ? 'mid' : 'bad'}`}>{scan.perfScore ?? '—'}</span>
+                <span class={`score ${(scan.seoScore ?? 0) >= 80 ? 'good' : (scan.seoScore ?? 0) >= 50 ? 'mid' : 'bad'}`}>{scan.seoScore ?? '—'}</span>
+                <span class={`score ${scan.securityScore >= 75 ? 'good' : scan.securityScore >= 45 ? 'mid' : 'bad'}`}>{scan.securityGrade}</span>
+                <span class="text-secondary">{scan.techCount}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <style>
+    .page-content { padding-top: 6rem; padding-bottom: 6rem; }
+    .page-header { text-align: center; margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    .timeline-wrapper { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .score-chart { padding: 1.5rem; }
+    .chart-container { position: relative; width: 100%; min-height: 220px; }
+
+    .diff-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .diff-entry { display: flex; gap: 1rem; align-items: flex-start; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .diff-date { font-size: 0.78rem; color: hsl(var(--text-secondary)); min-width: 90px; flex-shrink: 0; }
+    .diff-changes { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .diff-added { font-size: 0.78rem; font-weight: 600; color: #00e676; background: rgba(0,230,118,0.1); padding: 2px 8px; border-radius: 4px; }
+    .diff-removed { font-size: 0.78rem; font-weight: 600; color: #ff4b4b; background: rgba(255,75,75,0.1); padding: 2px 8px; border-radius: 4px; }
+
+    .scans-table { display: flex; flex-direction: column; gap: 0; }
+    .scan-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 0.5rem; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.82rem; align-items: center; }
+    .scan-header { font-weight: 700; color: hsl(var(--text-secondary)); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .scan-date { color: hsl(var(--text-secondary)); }
+    .score { font-weight: 700; }
+    .score.good { color: #00e676; }
+    .score.mid { color: #ffa726; }
+    .score.bad { color: #ff4b4b; }
+
+    @media (max-width: 640px) {
+      .scan-row { grid-template-columns: 1.5fr 1fr 1fr 1fr 0.5fr; font-size: 0.75rem; }
+    }
+  </style>
+
+  <script define:vars={{ history }}>
+    function drawChart() {
+      const canvas = document.getElementById('scoreChart');
+      if (!canvas || history.length < 2) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = 220 * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = '220px';
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width;
+      const H = 220;
+      const pad = { top: 20, right: 20, bottom: 30, left: 40 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const datasets = [
+        { key: 'perfScore', color: '#00e676', label: 'Perf' },
+        { key: 'seoScore', color: '#42a5f5', label: 'SEO' },
+        { key: 'securityScore', color: '#ffa726', label: 'Security' },
+      ];
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      for (let v = 0; v <= 100; v += 25) {
+        const y = pad.top + plotH - (v / 100) * plotH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(v.toString(), pad.left - 6, y + 3);
+      }
+
+      datasets.forEach(ds => {
+        const points = history.map((s, i) => {
+          const val = s[ds.key];
+          if (val == null) return null;
+          return { x: pad.left + (i / (history.length - 1)) * plotW, y: pad.top + plotH - (val / 100) * plotH };
+        }).filter(Boolean);
+
+        if (points.length < 2) return;
+
+        ctx.beginPath();
+        ctx.strokeStyle = ds.color;
+        ctx.lineWidth = 2;
+        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+
+        points.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = ds.color;
+          ctx.fill();
+        });
+      });
+
+      const legendY = H - 8;
+      let legendX = pad.left;
+      datasets.forEach(ds => {
+        ctx.fillStyle = ds.color;
+        ctx.fillRect(legendX, legendY - 6, 12, 3);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(ds.label, legendX + 16, legendY);
+        legendX += ctx.measureText(ds.label).width + 32;
+      });
+    }
+
+    drawChart();
+    window.addEventListener('resize', drawChart);
+  </script>
+</Layout>

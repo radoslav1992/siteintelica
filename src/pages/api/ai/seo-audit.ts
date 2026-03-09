@@ -63,8 +63,8 @@ CRAWLABILITY:
 - robots.txt: ${robotsTxt?.found ? 'Found' : 'Missing'}
 - Sitemap: ${sitemapData?.found ? `Found (${sitemapData.urlCount} URLs)` : 'Missing'}
 
-PERFORMANCE: ${perf?.performanceScore ?? 'unknown'}/100
-SEO SCORE: ${perf?.seoScore ?? 'unknown'}/100
+PERFORMANCE: ${perf?.score ?? perf?.performanceScore ?? 'unknown'}/100
+SEO SCORE: ${perf?.seo ?? perf?.seoScore ?? 'unknown'}/100
 
 LINKS:
 - Outbound links: ${outboundLinks?.length ?? 0} unique external domains

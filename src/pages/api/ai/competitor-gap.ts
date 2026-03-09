@@ -42,8 +42,8 @@ export const POST: APIRoute = async (context) => {
 SITE A: ${domainA}
 - Technologies: ${techsA.join(', ')}
 - Security Grade: ${gradeA.grade} (${gradeA.score}/100)
-- Performance Score: ${dataA.performance?.performanceScore ?? 'unknown'}/100
-- SEO Score: ${dataA.performance?.seoScore ?? 'unknown'}/100
+- Performance Score: ${dataA.performance?.score ?? dataA.performance?.performanceScore ?? 'unknown'}/100
+- SEO Score: ${dataA.performance?.seo ?? dataA.performance?.seoScore ?? 'unknown'}/100
 - Meta Description: ${dataA.seo?.description?.substring(0, 100) || 'None'}
 - Word Count: ${dataA.readability?.wordCount ?? 'unknown'}
 - Has Sitemap: ${dataA.sitemapData?.found ? 'Yes' : 'No'}
@@ -52,8 +52,8 @@ SITE A: ${domainA}
 SITE B: ${domainB}
 - Technologies: ${techsB.join(', ')}
 - Security Grade: ${gradeB.grade} (${gradeB.score}/100)
-- Performance Score: ${dataB.performance?.performanceScore ?? 'unknown'}/100
-- SEO Score: ${dataB.performance?.seoScore ?? 'unknown'}/100
+- Performance Score: ${dataB.performance?.score ?? dataB.performance?.performanceScore ?? 'unknown'}/100
+- SEO Score: ${dataB.performance?.seo ?? dataB.performance?.seoScore ?? 'unknown'}/100
 - Meta Description: ${dataB.seo?.description?.substring(0, 100) || 'None'}
 - Word Count: ${dataB.readability?.wordCount ?? 'unknown'}
 - Has Sitemap: ${dataB.sitemapData?.found ? 'Yes' : 'No'}
@@ -83,8 +83,8 @@ Keep it under 400 words, data-driven, and professional.`;
         }
 
         // Local fallback
-        const perfA = dataA.performance?.performanceScore ?? 0;
-        const perfB = dataB.performance?.performanceScore ?? 0;
+        const perfA = dataA.performance?.score ?? dataA.performance?.performanceScore ?? 0;
+        const perfB = dataB.performance?.score ?? dataB.performance?.performanceScore ?? 0;
         const winner = gradeA.score + perfA > gradeB.score + perfB ? domainA : domainB;
 
         const fallback = `## Competitor Gap Analysis\n\n` +
