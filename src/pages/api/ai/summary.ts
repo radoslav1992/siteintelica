@@ -35,7 +35,7 @@ export const POST: APIRoute = async (context) => {
         const keywords = (data.keywords || []).slice(0, 10).map((k: any) => k.word).join(', ');
         const seoDesc = data.seo?.description || 'N/A';
         const socials = (data.socials || []).join(', ') || 'None';
-        const perfScore = data.performance?.performanceScore ?? 'N/A';
+        const perfScore = data.performance?.score ?? data.performance?.performanceScore ?? 'N/A';
 
         // Try Gemini first, fall back to local
         const prompt = `You are a business analyst. Generate a concise executive summary and SWOT analysis for the website "${domain}".
