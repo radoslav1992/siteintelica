@@ -53,7 +53,7 @@ if (Astro.locals.user) {
         });
 
         if (response.type === 'opaqueredirect' || response.status === 302 || response.redirected) {
-             window.location.href = response.url || '/dashboard';
+             window.location.href = '/dashboard';
         } else if (!response.ok) {
             const data = await response.json();
             if (errorMessage) {

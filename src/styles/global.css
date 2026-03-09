@@ -58,6 +58,10 @@ body {
   padding: 0 2rem;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .text-gradient {
   background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
   -webkit-background-clip: text;
