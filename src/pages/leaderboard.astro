@@ -5,46 +5,160 @@ import { getLeaderboard } from '../db/client';
 const leaderboard = getLeaderboard();
 ---
 
-<Layout title="Leaderboard | SiteIntelica">
-  <div class="container pt-32 pb-24">
-    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 3rem; text-align: center;">
-      <h1 class="text-4xl font-extrabold text-gradient">🏆 Domain Leaderboard</h1>
-      <p class="text-secondary text-lg">The most analyzed websites on SiteIntelica.</p>
-    </div>
+<Layout title="Leaderboard">
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Domain Leaderboard</h1>
+      <p class="text-secondary">The most analyzed websites on SiteIntelica</p>
+    </header>
 
-    <div style="max-width: 800px; margin: 0 auto;">
+    <div class="content-wrapper">
       {leaderboard.length === 0 ? (
-        <div class="glass-panel p-6 animate-fade-in" style="text-align: center;">
-          <p class="text-secondary">No scans in the database yet. Be the first to <a href="/" style="color:hsl(var(--accent-primary)); text-decoration:underline;">scan a website</a>!</p>
+        <div class="glass-panel empty-state">
+          <p class="text-secondary">No scans in the database yet. Be the first to <a href="/" class="text-accent-primary font-semibold">scan a website</a>!</p>
         </div>
       ) : (
         leaderboard.map((entry, i) => (
-          <div class="glass-panel p-6 animate-fade-in" style={`margin-bottom: 0.75rem; animation-delay: ${i * 0.04}s; display:flex; justify-content:space-between; align-items:center;`}>
-            <div style="display:flex; align-items:center; gap:1rem;">
-              <div style={`width:36px; height:36px; border-radius:50%; background:${i < 3 ? 'linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))' : 'hsla(var(--text-primary), 0.1)'}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; color:${i < 3 ? '#fff' : 'hsl(var(--text-secondary))'};`}>
+          <div class="leader-item glass-panel animate-fade-in" style={`animation-delay: ${i * 0.03}s;`}>
+            <div class="leader-left">
+              <div class:list={['rank-circle', { 'rank-top': i < 3 }]}>
                 {i + 1}
               </div>
-              <img src={`https://logo.clearbit.com/${entry.domain}`} alt="" width="28" height="28" style="border-radius:6px; background:rgba(255,255,255,0.1);" onerror="this.style.display='none'" />
+              <img src={`https://logo.clearbit.com/${entry.domain}`} alt="" width="28" height="28" class="domain-logo" loading="lazy" onerror="this.style.display='none'" />
               <div>
-                <a href={`/report/${entry.domain}`} style="color:hsl(var(--text-primary)); font-weight:600; font-size:1rem; text-decoration:none;">
-                  {entry.domain}
-                </a>
-                <div style="font-size:0.7rem; color:hsl(var(--text-secondary));">
+                <a href={`/report/${entry.domain}`} class="domain-link">{entry.domain}</a>
+                <div class="leader-meta">
                   Last scanned: {new Date(entry.last_scanned + ' Z').toLocaleDateString()}
                 </div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-              <span class="badge" style="background:hsla(var(--accent-primary), 0.15); color:hsl(var(--accent-primary)); font-weight:700;">
-                {entry.scan_count} scans
-              </span>
-              <button class="badge" style="cursor:pointer; border:none; background:hsla(var(--accent-secondary), 0.2); color:hsl(var(--accent-secondary));" onclick={`window.location.href='/?scan=https://${entry.domain}'`}>
-                Scan
-              </button>
+            <div class="leader-right">
+              <span class="badge scan-count-badge">{entry.scan_count} scans</span>
+              <a href={`/?scan=https://${entry.domain}`} class="scan-link-btn">Scan</a>
             </div>
           </div>
         ))
       )}
     </div>
   </div>
+
+  <style>
+    .page-content {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+
+    .content-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .leader-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .leader-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .rank-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: hsl(var(--text-secondary));
+      flex-shrink: 0;
+    }
+
+    .rank-top {
+      background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+      color: hsl(var(--bg-primary));
+    }
+
+    .domain-logo {
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      flex-shrink: 0;
+    }
+
+    .domain-link {
+      color: hsl(var(--text-primary));
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .domain-link:hover {
+      color: hsl(var(--accent-primary));
+    }
+
+    .leader-meta {
+      font-size: 0.72rem;
+      color: hsl(var(--text-muted));
+      margin-top: 1px;
+    }
+
+    .leader-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .scan-count-badge {
+      background: hsla(var(--accent-primary), 0.1);
+      color: hsl(var(--accent-primary));
+      font-weight: 700;
+    }
+
+    .scan-link-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-sm);
+      background: hsla(var(--accent-secondary), 0.1);
+      color: hsl(var(--accent-secondary));
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all var(--transition-fast);
+    }
+
+    .scan-link-btn:hover {
+      background: hsla(var(--accent-secondary), 0.2);
+    }
+
+    @media (max-width: 640px) {
+      .leader-item { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+      .leader-right { width: 100%; }
+    }
+  </style>
 </Layout>

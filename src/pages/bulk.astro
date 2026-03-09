@@ -4,45 +4,149 @@ export const prerender = false;
 ---
 
 <Layout title="Bulk Scanner">
-  <div class="container" style="max-width:900px; margin:0 auto; padding:2rem 1rem;">
-    <header style="text-align:center; margin-bottom:2rem;">
-      <h1 style="font-size:2.2rem; font-weight:800;">⚡ Bulk Scanner</h1>
-      <p style="color:hsl(var(--text-secondary)); margin-top:0.5rem;">Scan multiple websites at once. Paste one URL per line.</p>
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Bulk Scanner</h1>
+      <p class="text-secondary">Scan multiple websites at once. Paste one URL per line.</p>
     </header>
 
-    <div class="glass-panel" style="padding:1.5rem;">
-      <textarea id="bulk-urls" rows="8" placeholder="https://stripe.com&#10;https://github.com&#10;https://shopify.com"
-        style="width:100%; background:rgba(255,255,255,0.03); border:1px solid hsla(var(--text-primary),0.12); border-radius:8px; padding:0.75rem; color:hsl(var(--text-primary)); font-family:monospace; font-size:0.85rem; resize:vertical;"></textarea>
+    <div class="content-wrapper">
+      <div class="glass-panel textarea-card">
+        <textarea id="bulk-urls" rows="8" placeholder="https://stripe.com&#10;https://github.com&#10;https://shopify.com" class="bulk-textarea"></textarea>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; flex-wrap:wrap; gap:0.75rem;">
-        <div>
-          <span id="url-count" style="font-size:0.8rem; color:hsl(var(--text-secondary));">0 URLs</span>
-        </div>
-        <div style="display:flex; gap:0.75rem;">
-          <button id="export-csv" class="btn-secondary" style="display:none; padding:0.5rem 1rem; border-radius:8px; background:rgba(0,230,118,0.15); color:#00e676; border:1px solid rgba(0,230,118,0.3); cursor:pointer; font-weight:600; font-size:0.85rem;">
-            📥 Export CSV
-          </button>
-          <button id="start-bulk" style="padding:0.6rem 1.5rem; border-radius:8px; background:hsl(var(--accent-primary)); color:#000; border:none; cursor:pointer; font-weight:700; font-size:0.9rem;">
-            🚀 Start Scanning
-          </button>
+        <div class="textarea-footer">
+          <span id="url-count" class="url-counter">0 URLs</span>
+          <div class="actions">
+            <button id="export-csv" class="btn-secondary export-btn" style="display:none;">Export CSV</button>
+            <button id="start-bulk" class="btn-primary scan-btn">Start Scanning</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Progress -->
-    <div id="progress-area" class="glass-panel" style="display:none; margin-top:1.5rem; padding:1rem 1.25rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-        <span style="font-weight:600;">Scanning...</span>
-        <span id="progress-text" style="font-size:0.85rem; color:hsl(var(--text-secondary));">0/0</span>
+      <div id="progress-area" class="glass-panel progress-card" style="display:none;">
+        <div class="progress-header">
+          <span class="font-semibold">Scanning...</span>
+          <span id="progress-text" class="text-sm text-secondary">0/0</span>
+        </div>
+        <div class="progress-track">
+          <div id="progress-bar" class="progress-fill"></div>
+        </div>
       </div>
-      <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
-        <div id="progress-bar" style="height:100%; width:0%; background:hsl(var(--accent-primary)); border-radius:4px; transition:width 0.3s;"></div>
-      </div>
-    </div>
 
-    <!-- Results -->
-    <div id="bulk-results" style="margin-top:1.5rem;"></div>
+      <div id="bulk-results" class="results-area"></div>
+    </div>
   </div>
+
+  <style>
+    .page-content {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .textarea-card {
+      padding: 1.5rem;
+    }
+
+    .bulk-textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      color: hsl(var(--text-primary));
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color var(--transition-smooth);
+    }
+
+    .bulk-textarea:focus {
+      border-color: hsl(var(--accent-primary));
+    }
+
+    .bulk-textarea::placeholder {
+      color: hsl(var(--text-muted));
+    }
+
+    .textarea-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .url-counter {
+      font-size: 0.8rem;
+      color: hsl(var(--text-secondary));
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .scan-btn {
+      padding: 0.6rem 1.5rem;
+    }
+
+    .export-btn {
+      padding: 0.5rem 1rem;
+      background: hsla(var(--success), 0.12);
+      color: hsl(var(--success));
+      border-color: hsla(var(--success), 0.25);
+    }
+
+    .progress-card {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: hsl(var(--accent-primary));
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .results-area {
+      margin-top: 1.5rem;
+    }
+  </style>
 
   <script>
     const textarea = document.getElementById('bulk-urls') as HTMLTextAreaElement;
@@ -86,7 +190,7 @@ export const prerender = false;
         const url = urls[i];
         const card = document.createElement('div');
         card.className = 'glass-panel';
-        card.style.cssText = 'padding:0.85rem 1.25rem; margin-bottom:0.5rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid transparent;';
+        card.style.cssText = 'padding:0.85rem 1.25rem; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center; border-left:3px solid transparent;';
 
         try {
           const domain = new URL(url).hostname;
@@ -103,28 +207,28 @@ export const prerender = false;
           const data = await response.json();
 
           const techCount = data.technologies?.length || 0;
-          const perf = data.performance?.performanceScore ?? '—';
-          const seo = data.performance?.seoScore ?? '—';
+          const perf = data.performance?.score ?? '—';
+          const seo = data.performance?.seo ?? '—';
           const grade = data.securityGrade?.grade || '—';
 
-          card.style.borderLeftColor = '#00e676';
+          card.style.borderLeftColor = 'hsl(var(--success))';
           card.innerHTML = `
             <div>
               <a href="/?scan=${url}" style="font-weight:700; color:inherit; text-decoration:none;">${domain}</a>
               <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:2px;">${techCount} technologies</div>
             </div>
-            <div style="display:flex; gap:0.75rem; align-items:center;">
+            <div style="display:flex; gap:0.5rem; align-items:center;">
               <span class="badge" style="font-size:0.7rem;">Perf: ${perf}</span>
               <span class="badge" style="font-size:0.7rem;">SEO: ${seo}</span>
-              <span class="badge" style="font-size:0.7rem; ${grade === 'A' || grade === 'A+' ? 'color:#00e676;' : grade === 'F' ? 'color:#ff4b4b;' : ''}">Sec: ${grade}</span>
+              <span class="badge" style="font-size:0.7rem;">Sec: ${grade}</span>
             </div>
           `;
 
           scanResults.push({ domain, techCount, perf, seo, securityGrade: grade, status: 'OK' });
-        } catch (err) {
-          card.style.borderLeftColor = '#ff4b4b';
+        } catch {
+          card.style.borderLeftColor = 'hsl(var(--danger))';
           const domain = (() => { try { return new URL(url).hostname; } catch { return url; } })();
-          card.innerHTML = `<div><strong>${domain}</strong></div><span class="badge" style="color:#ff4b4b; font-size:0.7rem;">Failed</span>`;
+          card.innerHTML = `<div><strong>${domain}</strong></div><span class="badge" style="color:hsl(var(--danger)); font-size:0.7rem;">Failed</span>`;
           scanResults.push({ domain, techCount: 0, perf: 0, seo: 0, securityGrade: '—', status: 'FAILED' });
         }
       }
@@ -132,7 +236,7 @@ export const prerender = false;
       progressText.textContent = `Done! ${urls.length}/${urls.length}`;
       startBtn.disabled = false;
       startBtn.style.opacity = '1';
-      exportBtn.style.display = 'inline-block';
+      exportBtn.style.display = 'inline-flex';
     });
 
     exportBtn.addEventListener('click', () => {

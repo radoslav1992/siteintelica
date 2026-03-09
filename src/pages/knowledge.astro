@@ -4,9 +4,9 @@ import Layout from '../layouts/Layout.astro';
 
 <Layout title="Knowledge Base" description="Learn about competitor analysis, tech stacks, and digital marketing strategies.">
   <div class="container pb-24">
-    <header class="text-center pt-24 pb-12">
-      <h1 class="text-gradient text-5xl font-extrabold mb-4 tracking-tight">Knowledge Base</h1>
-      <p class="text-xl text-secondary max-w-2xl mx-auto">
+    <header class="page-header">
+      <h1 class="text-gradient page-title">Knowledge Base</h1>
+      <p class="text-lg text-secondary max-w-2xl mx-auto">
         Deep dives into competitor analysis, tech stack research, and modern web architecture.
       </p>
     </header>
@@ -59,19 +59,18 @@ import Layout from '../layouts/Layout.astro';
   </div>
 
   <style>
-    .text-center { text-align: center; }
-    .pt-24 { padding-top: 6rem; }
-    .pb-12 { padding-bottom: 3rem; }
-    .pb-24 { padding-bottom: 6rem; }
-    .mb-4 { margin-bottom: 1rem; }
-    
-    .text-5xl { font-size: 3rem; }
-    .text-xl { font-size: 1.25rem; }
-    .font-extrabold { font-weight: 800; }
-    .tracking-tight { letter-spacing: -0.025em; }
-    .max-w-2xl { max-width: 42rem; }
-    .mx-auto { margin-left: auto; margin-right: auto; }
-    .text-secondary { color: hsl(var(--text-secondary)); }
+    .page-header {
+      text-align: center;
+      padding-top: 6rem;
+      padding-bottom: 3rem;
+    }
+
+    .page-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
 
     .articles-grid {
       display: grid;

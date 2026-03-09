@@ -6,36 +6,154 @@ if (Astro.locals.user) {
 }
 ---
 
-<Layout title="Login | SiteIntelica">
-  <div class="container pt-24 pb-24 auth-wrapper">
-    <div class="glass-panel p-2 animate-fade-in" style="max-width: 400px; margin: 0 auto; padding: 2rem;">
-      <h1 class="text-3xl font-extrabold mb-2 text-center text-gradient">Welcome back</h1>
-      <p class="text-secondary text-center mb-8 text-sm">Sign in to your SiteIntelica account.</p>
+<Layout title="Login">
+  <div class="container auth-wrapper">
+    <div class="glass-panel animate-fade-in auth-card">
+      <div class="auth-header">
+        <div class="auth-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
+          </svg>
+        </div>
+        <h1 class="text-gradient">Welcome back</h1>
+        <p class="text-secondary text-sm">Sign in to your SiteIntelica account</p>
+      </div>
 
       <form method="post" action="/api/auth/login" class="auth-form" id="loginForm">
-        <label for="email" class="text-sm font-semibold mb-1 block">Email</label>
-        <input type="email" name="email" id="email" class="search-input mb-4" style="width:100%; padding:0.75rem; font-size:1rem;" required />
+        <div class="field-group">
+          <label for="email">Email</label>
+          <input type="email" name="email" id="email" placeholder="you@company.com" required />
+        </div>
         
-        <label for="password" class="text-sm font-semibold mb-1 block">Password</label>
-        <input type="password" name="password" id="password" class="search-input mb-6" style="width:100%; padding:0.75rem; font-size:1rem;" required />
+        <div class="field-group">
+          <label for="password">Password</label>
+          <input type="password" name="password" id="password" placeholder="Your password" required />
+        </div>
         
-        <div id="error-message" class="text-sm mb-4 hidden" style="color: #ff4b4b; background: rgba(255, 75, 75, 0.1); padding: 0.5rem; border-radius: 4px; text-align: center;"></div>
+        <div id="error-message" class="error-banner hidden"></div>
         
-        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Sign In</button>
+        <button type="submit" class="btn-primary submit-btn">Sign In</button>
       </form>
 
-      <p class="text-center text-sm mt-6 text-secondary">
-        Don't have an account? <a href="/register" style="color: hsl(var(--accent-primary)); text-decoration: none;">Create one</a>
+      <p class="auth-footer">
+        Don't have an account? <a href="/register">Create one</a>
       </p>
     </div>
   </div>
 
   <style>
     .auth-wrapper {
-      min-height: 80vh;
+      min-height: calc(100vh - 120px);
       display: flex;
       align-items: center;
       justify-content: center;
+      padding-top: 4rem;
+      padding-bottom: 4rem;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 2.5rem;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .auth-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: hsla(var(--accent-primary), 0.12);
+      color: hsl(var(--accent-primary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    .auth-header h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .field-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(var(--text-secondary));
+    }
+
+    .field-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: hsla(var(--bg-secondary), 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      color: hsl(var(--text-primary));
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+    }
+
+    .field-group input:focus {
+      border-color: hsl(var(--accent-primary));
+      box-shadow: 0 0 0 3px hsla(var(--accent-primary), 0.12);
+    }
+
+    .field-group input::placeholder {
+      color: hsl(var(--text-muted));
+    }
+
+    .error-banner {
+      color: hsl(var(--danger));
+      background: hsla(var(--danger), 0.08);
+      border: 1px solid hsla(var(--danger), 0.2);
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 0.85rem;
+      font-size: 1rem;
+      margin-top: 0.25rem;
+    }
+
+    .auth-footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: hsl(var(--text-secondary));
+      margin-top: 1.75rem;
+    }
+
+    .auth-footer a {
+      color: hsl(var(--accent-primary));
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .auth-footer a:hover {
+      text-decoration: underline;
     }
   </style>
 

@@ -8,160 +8,292 @@ if (!user) {
 	return Astro.redirect("/login");
 }
 
-// Fetch fresh user data to get webhook_url
 const stmt = db.prepare('SELECT webhook_url FROM user WHERE id = ?');
 const userData = stmt.get(user.id) as { webhook_url: string | null } | undefined;
 const webhookUrl = userData?.webhook_url || '';
 ---
 
-<Layout title="Dashboard | SiteIntelica">
-  <div class="container pt-32 pb-24">
-    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 3rem; text-align: center;">
-      <h1 class="text-4xl font-extrabold text-gradient">Welcome Back</h1>
-      <p class="text-secondary text-lg">Manage your SiteIntelica API keys and run bulk analyses.</p>
-      <div style="display: inline-flex; align-items: center; justify-content: center; margin-top: 1rem;">
-        <span class="badge" style="font-family: monospace; font-size: 0.9rem;">{user.email}</span>
+<Layout title="Dashboard">
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Welcome Back</h1>
+      <p class="text-secondary text-lg">Manage your API keys and run bulk analyses.</p>
+      <div class="user-badge">
+        <span class="badge font-mono">{user.email}</span>
       </div>
-    </div>
+    </header>
 
-    <!-- API Access Card -->
-    <div class="glass-panel p-6 animate-fade-in" style="max-width: 800px; margin: 0 auto 2rem; border-top: 3px solid hsl(var(--accent-primary)); padding: 2rem;">
-        <h2 class="text-2xl font-bold mb-4">Developer API Access</h2>
-        <p class="text-secondary mb-6 text-sm">Use your unique API key to programmatically scan URLs and retrieve JSON intelligence reports bypassing the frontend UI.</p>
+    <div class="cards-wrapper">
+      <!-- API Access Card -->
+      <div class="glass-panel card animate-fade-in card-accent-primary">
+        <h2 class="card-title">Developer API Access</h2>
+        <p class="text-secondary text-sm mb-6">Use your unique API key to programmatically scan URLs and retrieve JSON intelligence reports.</p>
         
-        <label class="text-sm font-semibold mb-2 block">Your Active API Key</label>
-        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-            <!-- @ts-ignore -->
-            <input type="text" readonly value={user.apiKey} class="search-input" id="apiKeyInput" style="flex-grow: 1; padding: 0.75rem 1rem; font-family: monospace; background: rgba(0,0,0,0.2) !important; color: #fff;" />
-            <button class="btn-primary" id="copyBtn" style="position: static; height: auto;" onclick="navigator.clipboard.writeText(document.getElementById('apiKeyInput').value); this.innerText = 'Copied!'; setTimeout(() => this.innerText = 'Copy', 2000);">Copy</button>
+        <label class="field-label">Your Active API Key</label>
+        <div class="api-key-row">
+          <!-- @ts-ignore -->
+          <input type="text" readonly value={user.apiKey} class="mono-input" id="apiKeyInput" />
+          <button class="btn-primary copy-btn" id="copyBtn" onclick="navigator.clipboard.writeText(document.getElementById('apiKeyInput').value); this.innerText = 'Copied!'; setTimeout(() => this.innerText = 'Copy', 2000);">Copy</button>
         </div>
 
-        <div style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 1rem; overflow-x: auto;">
-            <p class="text-sm font-semibold mb-2 text-secondary">Example cURL Request:</p>
-            <code style="font-size: 0.8rem; font-family: monospace; color: #a9b1d6; white-space: pre;">curl -X POST https://siteintelica.com/api/analyze \
-  -H "Authorization: Bearer <span style="color:hsl(var(--accent-primary))">YOUR_API_KEY</span>" \
+        <div class="code-block">
+          <p class="text-sm font-semibold mb-2 text-secondary">Example cURL Request:</p>
+          <code>curl -X POST https://siteintelica.com/api/analyze \
+  -H "Authorization: Bearer <span class="text-accent-primary">YOUR_API_KEY</span>" \
   -H "Content-Type: application/json" \
   -d '&#123;"url":"https://stripe.com"&#125;'</code>
         </div>
-    </div>
+      </div>
 
-    <!-- Webhook Integration Card -->
-    <div class="glass-panel p-6 animate-fade-in" style="max-width: 800px; margin: 0 auto 2rem; border-top: 3px solid hsl(var(--accent-secondary)); padding: 2rem;">
-        <h2 class="text-2xl font-bold mb-4">Webhook Integration</h2>
-        <p class="text-secondary mb-6 text-sm">Configure a webhook URL to receive real-time JSON payloads whenever a bulk scan finishes or a monitored competitor's stack changes.</p>
+      <!-- Webhook Integration Card -->
+      <div class="glass-panel card animate-fade-in card-accent-secondary" style="animation-delay:0.05s;">
+        <h2 class="card-title">Webhook Integration</h2>
+        <p class="text-secondary text-sm mb-6">Configure a webhook URL to receive real-time payloads when bulk scans finish or a competitor's stack changes.</p>
         
-        <form id="webhookForm" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-            <!-- @ts-ignore -->
-            <input type="url" name="webhookUrl" placeholder="https://your-server.com/api/webhooks/siteintelica" value={webhookUrl} class="search-input" id="webhookInput" style="flex-grow: 1; padding: 0.75rem 1rem; font-family: monospace; background: rgba(0,0,0,0.2) !important; color: #fff;" required />
-            <button type="submit" class="btn-primary" id="saveWebhookBtn" style="position: static; height: auto;">Save</button>
+        <form id="webhookForm" class="api-key-row">
+          <!-- @ts-ignore -->
+          <input type="url" name="webhookUrl" placeholder="https://your-server.com/api/webhooks/siteintelica" value={webhookUrl} class="mono-input" id="webhookInput" required />
+          <button type="submit" class="btn-primary copy-btn" id="saveWebhookBtn">Save</button>
         </form>
-        <p id="webhookStatus" class="text-sm text-secondary hidden"></p>
-    </div>
+        <p id="webhookStatus" class="text-sm text-secondary hidden" style="margin-top:0.75rem;"></p>
+      </div>
 
-    <!-- Bulk Scanner Block -->
-    <div class="glass-panel p-6 animate-fade-in" style="max-width: 800px; margin: 0 auto; animation-delay: 0.1s; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 1px dashed rgba(255,255,255,0.2); padding: 2rem;">
-        <div style="width: 48px; height: 48px; border-radius: 50%; background: hsla(var(--accent-primary), 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
-                <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-                <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
-                <path d="M9 15h6"></path>
-                <path d="M12 12v6"></path>
-            </svg>
+      <!-- Bulk Scanner -->
+      <div class="glass-panel card animate-fade-in card-dashed" style="animation-delay:0.1s;">
+        <div class="bulk-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
+            <path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 15h6" /><path d="M12 12v6" />
+          </svg>
         </div>
-        <h2 class="text-xl font-bold mb-2">Bulk Domain Scanner</h2>
-        <p class="text-secondary mb-6 text-sm">Upload a CSV/TXT containing up to 50 URLs. Our engine will iterate through the list and output a combined JSON intelligence report.</p>
+        <h2 class="card-title text-center">Bulk Domain Scanner</h2>
+        <p class="text-secondary text-sm text-center mb-6">Upload a CSV/TXT containing up to 50 URLs. Our engine will output a combined JSON intelligence report.</p>
         
-        <form id="bulkForm" style="width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 1rem;">
-            <input type="file" id="csvFile" name="file" accept=".csv, .txt" class="search-input" style="padding: 0.5rem; width: 100%; background: rgba(0,0,0,0.2) !important; color: #fff;" required />
-            <button type="submit" class="btn-primary" id="bulkBtn" style="position: static; width: 100%; padding: 0.75rem;">Run Bulk Analysis</button>
+        <form id="bulkForm" class="bulk-form">
+          <input type="file" id="csvFile" name="file" accept=".csv, .txt" class="file-input" required />
+          <button type="submit" class="btn-primary" id="bulkBtn" style="width:100%; padding:0.85rem;">Run Bulk Analysis</button>
         </form>
-        <p id="bulkStatus" class="text-sm mt-4 text-secondary hidden">Processing in the background... Please wait.</p>
+        <p id="bulkStatus" class="text-sm mt-4 text-secondary hidden text-center"></p>
+      </div>
     </div>
   </div>
 
+  <style>
+    .page-content {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+
+    .user-badge {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .cards-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      padding: 2rem;
+    }
+
+    .card-accent-primary {
+      border-top: 3px solid hsl(var(--accent-primary));
+    }
+
+    .card-accent-secondary {
+      border-top: 3px solid hsl(var(--accent-secondary));
+    }
+
+    .card-dashed {
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      text-align: center;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: hsl(var(--text-secondary));
+    }
+
+    .api-key-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .mono-input {
+      flex-grow: 1;
+      padding: 0.75rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      color: hsl(var(--text-primary));
+      outline: none;
+      transition: border-color var(--transition-smooth);
+    }
+
+    .mono-input:focus {
+      border-color: hsl(var(--accent-primary));
+    }
+
+    .copy-btn {
+      flex-shrink: 0;
+      padding: 0.75rem 1.25rem;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      overflow-x: auto;
+    }
+
+    .code-block code {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: hsl(var(--text-secondary));
+      white-space: pre;
+      line-height: 1.6;
+    }
+
+    .bulk-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: hsla(var(--accent-primary), 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    .bulk-form {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .file-input {
+      padding: 0.6rem;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      color: hsl(var(--text-primary));
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .api-key-row { flex-direction: column; }
+      .page-header h1 { font-size: 2rem; }
+    }
+  </style>
+
   <script>
-      const bulkForm = document.getElementById('bulkForm') as HTMLFormElement;
-      const bulkBtn = document.getElementById('bulkBtn') as HTMLButtonElement;
-      const bulkStatus = document.getElementById('bulkStatus');
+    const bulkForm = document.getElementById('bulkForm') as HTMLFormElement;
+    const bulkBtn = document.getElementById('bulkBtn') as HTMLButtonElement;
+    const bulkStatus = document.getElementById('bulkStatus');
 
-      if (bulkForm && bulkBtn && bulkStatus) {
-          bulkForm.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              bulkBtn.disabled = true;
-              bulkBtn.innerText = 'Analyzing Queue...';
-              bulkStatus.classList.remove('hidden');
-              bulkStatus.innerText = 'Processing in the background... Please wait.';
-              bulkStatus.style.color = 'var(--text-secondary)';
+    if (bulkForm && bulkBtn && bulkStatus) {
+      bulkForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        bulkBtn.disabled = true;
+        bulkBtn.innerText = 'Analyzing Queue...';
+        bulkStatus.classList.remove('hidden');
+        bulkStatus.innerText = 'Processing in the background... Please wait.';
+        bulkStatus.style.color = 'hsl(var(--text-secondary))';
 
-              const formData = new FormData(bulkForm);
-              try {
-                  const res = await fetch('/api/bulk-analyze', {
-                      method: 'POST',
-                      body: formData
-                  });
-                  
-                  if (res.ok) {
-                      const data = await res.json();
-                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `siteintelica_bulk_report_${Date.now()}.json`;
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      bulkStatus.innerText = `Analysis complete! Sent ${data.bulk_processed} domain reports.`;
-                      bulkStatus.style.color = '#00e676';
-                  } else {
-                      const err = await res.json();
-                      bulkStatus.innerText = 'Error: ' + err.error;
-                      bulkStatus.style.color = '#ff4b4b';
-                  }
-              } catch(e) {
-                  bulkStatus.innerText = 'Network error occurred during bulk pass.';
-                  bulkStatus.style.color = '#ff4b4b';
-              }
-              
-              bulkBtn.disabled = false;
-              bulkBtn.innerText = 'Run Bulk Analysis';
+        const formData = new FormData(bulkForm);
+        try {
+          const res = await fetch('/api/bulk-analyze', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `siteintelica_bulk_report_${Date.now()}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            bulkStatus.innerText = `Analysis complete! ${data.bulk_processed} domains processed.`;
+            bulkStatus.style.color = 'hsl(var(--success))';
+          } else {
+            const err = await res.json();
+            bulkStatus.innerText = 'Error: ' + err.error;
+            bulkStatus.style.color = 'hsl(var(--danger))';
+          }
+        } catch {
+          bulkStatus.innerText = 'Network error occurred during bulk pass.';
+          bulkStatus.style.color = 'hsl(var(--danger))';
+        }
+        bulkBtn.disabled = false;
+        bulkBtn.innerText = 'Run Bulk Analysis';
+      });
+    }
+
+    const webhookForm = document.getElementById('webhookForm') as HTMLFormElement;
+    const saveWebhookBtn = document.getElementById('saveWebhookBtn') as HTMLButtonElement;
+    const webhookStatus = document.getElementById('webhookStatus');
+
+    if (webhookForm && saveWebhookBtn && webhookStatus) {
+      webhookForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        saveWebhookBtn.disabled = true;
+        saveWebhookBtn.innerText = 'Saving...';
+        const formData = new FormData(webhookForm);
+        try {
+          const res = await fetch('/api/user/webhook', {
+            method: 'POST',
+            body: JSON.stringify({ webhookUrl: formData.get('webhookUrl') }),
+            headers: { 'Content-Type': 'application/json' }
           });
-      }
-
-      // Webhook Form Logic
-      const webhookForm = document.getElementById('webhookForm') as HTMLFormElement;
-      const saveWebhookBtn = document.getElementById('saveWebhookBtn') as HTMLButtonElement;
-      const webhookStatus = document.getElementById('webhookStatus');
-
-      if (webhookForm && saveWebhookBtn && webhookStatus) {
-          webhookForm.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              saveWebhookBtn.disabled = true;
-              saveWebhookBtn.innerText = 'Saving...';
-              
-              const formData = new FormData(webhookForm);
-              try {
-                  const res = await fetch('/api/user/webhook', {
-                      method: 'POST',
-                      body: JSON.stringify({ webhookUrl: formData.get('webhookUrl') }),
-                      headers: { 'Content-Type': 'application/json' }
-                  });
-                  
-                  if (res.ok) {
-                      webhookStatus.innerText = 'Webhook URL saved successfully!';
-                      webhookStatus.style.color = '#00e676';
-                  } else {
-                      const err = await res.json();
-                      webhookStatus.innerText = 'Error: ' + err.error;
-                      webhookStatus.style.color = '#ff4b4b';
-                  }
-              } catch(e) {
-                  webhookStatus.innerText = 'Network error occurred.';
-                  webhookStatus.style.color = '#ff4b4b';
-              }
-              
-              webhookStatus.classList.remove('hidden');
-              saveWebhookBtn.disabled = false;
-              saveWebhookBtn.innerText = 'Save';
-          });
-      }
+          if (res.ok) {
+            webhookStatus.innerText = 'Webhook URL saved successfully!';
+            webhookStatus.style.color = 'hsl(var(--success))';
+          } else {
+            const err = await res.json();
+            webhookStatus.innerText = 'Error: ' + err.error;
+            webhookStatus.style.color = 'hsl(var(--danger))';
+          }
+        } catch {
+          webhookStatus.innerText = 'Network error occurred.';
+          webhookStatus.style.color = 'hsl(var(--danger))';
+        }
+        webhookStatus.classList.remove('hidden');
+        saveWebhookBtn.disabled = false;
+        saveWebhookBtn.innerText = 'Save';
+      });
+    }
   </script>
 </Layout>

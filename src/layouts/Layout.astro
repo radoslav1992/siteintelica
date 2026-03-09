@@ -8,6 +8,18 @@ interface Props {
 
 const { title, description = "X-Ray any website to reveal its tech stack and how it makes money." } = Astro.props;
 const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { href: '/', label: 'Spy Tool' },
+  { href: '/trends', label: 'Trends' },
+  { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/compare', label: 'Compare' },
+  { href: '/history', label: 'History' },
+  { href: '/bulk', label: 'Bulk' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/about', label: 'About' },
+  { href: '/knowledge', label: 'Knowledge' },
+];
 ---
 
 <!DOCTYPE html>
@@ -15,10 +27,9 @@ const currentPath = Astro.url.pathname;
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     
-    <!-- SEO Optimization -->
     <title>{title} | SiteIntelica</title>
     <meta name="description" content={description} />
     <meta property="og:title" content={`${title} | SiteIntelica`} />
@@ -27,16 +38,13 @@ const currentPath = Astro.url.pathname;
     <meta property="og:url" content={Astro.url.href} />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site || Astro.url).href} />
 
-    <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4657327478747074" crossorigin="anonymous"></script>
 
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-9QFCYWV9C2"></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-9QFCYWV9C2');
     </script>
   </head>
@@ -45,38 +53,81 @@ const currentPath = Astro.url.pathname;
       <header class="container">
         <nav class="navbar">
           <a href="/" class="nav-brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
               <path d="M2 12h3l3 -9l5 18l3 -9h5" />
             </svg>
             SiteIntelica
           </a>
+
           <div class="nav-links">
-            <a href="/" class={`nav-link ${currentPath === '/' ? 'active' : ''}`}>Spy Tool</a>
-            <a href="/trends" class={`nav-link ${currentPath === '/trends' ? 'active' : ''}`}>Trends</a>
-            <a href="/leaderboard" class={`nav-link ${currentPath === '/leaderboard' ? 'active' : ''}`}>Leaderboard</a>
-            <a href="/compare" class={`nav-link ${currentPath === '/compare' ? 'active' : ''}`}>Compare</a>
-            <a href="/history" class={`nav-link ${currentPath === '/history' ? 'active' : ''}`}>History</a>
-            <a href="/bulk" class={`nav-link ${currentPath === '/bulk' ? 'active' : ''}`}>Bulk</a>
-            <a href="/blog" class={`nav-link ${currentPath.startsWith('/blog') ? 'active' : ''}`}>Blog</a>
-            <a href="/about" class={`nav-link ${currentPath === '/about' ? 'active' : ''}`}>About</a>
-            <a href="/knowledge" class={`nav-link ${currentPath === '/knowledge' ? 'active' : ''}`}>Knowledge</a>
-            <div class="auth-buttons" style="display: flex; gap: 0.5rem; margin-left: 1rem; padding-left: 1rem; border-left: 1px solid rgba(255,255,255,0.1);">
+            {navItems.map(item => (
+              <a
+                href={item.href}
+                class={`nav-link ${
+                  item.href === '/'
+                    ? currentPath === '/' ? 'active' : ''
+                    : currentPath.startsWith(item.href) ? 'active' : ''
+                }`}
+              >
+                {item.label}
+              </a>
+            ))}
+            <div class="auth-buttons">
               {Astro.locals.user ? (
                 <>
-                  <a href="/dashboard" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Dashboard</a>
-                  <form method="post" action="/api/auth/logout">
-                    <button class="nav-btn" style="padding: 0.4rem 1rem; font-size: 0.9rem; background: rgba(255, 75, 75, 0.1); color: #ff4b4b;">Log Out</button>
+                  <a href="/dashboard" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Dashboard</a>
+                  <form method="post" action="/api/auth/logout" style="margin:0;">
+                    <button class="nav-btn" style="color: hsl(var(--danger));">Log Out</button>
                   </form>
                 </>
               ) : (
                 <>
-                  <a href="/login" class="nav-btn" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Log In</a>
-                  <a href="/register" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Sign Up</a>
+                  <a href="/login" class="nav-btn">Log In</a>
+                  <a href="/register" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Sign Up</a>
                 </>
               )}
             </div>
           </div>
+
+          <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle navigation menu">
+            <svg id="menu-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+            <svg id="menu-icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </nav>
+
+        <div class="mobile-nav" id="mobile-nav">
+          {navItems.map(item => (
+            <a
+              href={item.href}
+              class={`nav-link ${
+                item.href === '/'
+                  ? currentPath === '/' ? 'active' : ''
+                  : currentPath.startsWith(item.href) ? 'active' : ''
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
+          <div class="auth-buttons">
+            {Astro.locals.user ? (
+              <>
+                <a href="/dashboard" class="btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem;">Dashboard</a>
+                <form method="post" action="/api/auth/logout" style="margin:0;">
+                  <button class="nav-btn" style="color: hsl(var(--danger)); width: 100%; justify-content: center;">Log Out</button>
+                </form>
+              </>
+            ) : (
+              <>
+                <a href="/login" class="nav-btn" style="flex:1; justify-content:center;">Log In</a>
+                <a href="/register" class="btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem; flex:1; text-align:center;">Sign Up</a>
+              </>
+            )}
+          </div>
+        </div>
       </header>
 
       <main class="flex-grow">
@@ -86,17 +137,31 @@ const currentPath = Astro.url.pathname;
       <footer class="footer container">
         <div class="footer-content">
           <div class="copyright">
-            &copy; {new Date().getFullYear()} SiteIntelica. All rights reserved.
+            &copy; {new Date().getFullYear()} SiteIntelica &middot; Tech intelligence for the modern web.
           </div>
           <div class="footer-links">
             <a href="/blog" class="footer-link">Blog</a>
             <a href="/about" class="footer-link">About</a>
             <a href="/knowledge" class="footer-link">Knowledge Base</a>
-            <a href="/privacy" class="footer-link">Privacy Policy</a>
-            <a href="/terms" class="footer-link">Terms of Service</a>
+            <a href="/privacy" class="footer-link">Privacy</a>
+            <a href="/terms" class="footer-link">Terms</a>
           </div>
         </div>
       </footer>
     </div>
+
+    <script is:inline>
+      const btn = document.getElementById('mobile-menu-btn');
+      const nav = document.getElementById('mobile-nav');
+      const iconOpen = document.getElementById('menu-icon-open');
+      const iconClose = document.getElementById('menu-icon-close');
+      if (btn && nav) {
+        btn.addEventListener('click', () => {
+          const isOpen = nav.classList.toggle('open');
+          if (iconOpen) iconOpen.style.display = isOpen ? 'none' : 'block';
+          if (iconClose) iconClose.style.display = isOpen ? 'block' : 'none';
+        });
+      }
+    </script>
   </body>
 </html>

@@ -304,16 +304,17 @@ export const POST: APIRoute = async (context) => {
 
     // 5. Compile final data payload
     const securityGrade = calculateSecurityGrade(parsedData?.security);
+    const trancoRank = isPremium ? (await getTrancoRank(domain)) : null;
     const enhancedData = {
       ...parsedData,
       screenshotUrl,
       similarSites,
       network: dnsInfo,
-      performance: performance,
+      performance,
       ssl: sslInfo,
       whois: whoisInfo,
       historicalTimestamp: previousScan ? previousScan.scannedAt : null,
-      historicalDiff: historicalDiff,
+      historicalDiff,
       subdomains: isPremium ? subdomains : null,
       openPorts: isPremium ? openPorts : null,
       robotsTxt: isPremium ? robotsTxt : null,
@@ -325,7 +326,7 @@ export const POST: APIRoute = async (context) => {
       brokenLinks: isPremium ? brokenLinks : null,
       securityGrade,
       isPremium,
-      trancoRank: isPremium ? (await getTrancoRank(domain)) : null,
+      trancoRank,
       structuredData: isPremium ? structuredData : null,
       socialProfiles: isPremium ? socialProfiles : null,
       cookieData: isPremium ? cookieData : null,
@@ -338,7 +339,7 @@ export const POST: APIRoute = async (context) => {
         readability,
         trackers: parsedData?.trackers,
         seo: parsedData?.seo
-      }, await getTrancoRank(domain)) : null
+      }, trancoRank) : null
     };
 
     // 5. Persist to History Database

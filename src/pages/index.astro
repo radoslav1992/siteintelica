@@ -20,30 +20,30 @@ const schemaData = {
 <Layout title="The Ultimate Tech Stack 'Spy' Tool">
   <script is:inline type="application/ld+json" set:html={JSON.stringify(schemaData)} />
   <div class="container">
-    <header class="hero text-center pt-24 pb-16">
-      <!-- Animated background orbs -->
+    <header class="hero text-center">
       <div class="hero-orbs">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
       </div>
       
-      <div style="position:relative; z-index:2;">
-        <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.2); border-radius:99px; padding:0.35rem 1rem; font-size:0.8rem; color:#FFD700; font-weight:600; margin-bottom:1.5rem;">
-          ✦ Trusted by 1,000+ developers & marketers
+      <div class="hero-content">
+        <div class="trust-badge">
+          <span class="trust-dot"></span>
+          Trusted by 1,000+ developers & marketers
         </div>
 
-        <h1 class="text-gradient text-5xl md:text-7xl font-extrabold mb-4 tracking-tight">SiteIntelica</h1>
-        <p class="text-xl md:text-2xl text-secondary max-w-2xl mx-auto" style="margin-bottom:1.5rem;">
+        <h1 class="text-gradient hero-title">SiteIntelica</h1>
+        <p class="hero-subtitle">
           X-Ray any website. Reveal exactly how it's built and how it makes money.
         </p>
 
-        <!-- Feature pills row -->
-        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:0.5rem; margin-bottom:2rem;">
-          <span class="feature-pill">🔍 Tech Stack</span>
-          <span class="feature-pill">🛡️ Security Grade</span>
-          <span class="feature-pill">🤖 AI Analysis</span>
-          <span class="feature-pill">📊 SEO & DNS</span>
-          <span class="feature-pill">⚡ Performance</span>
+        <div class="feature-pills">
+          <span class="feature-pill">Tech Stack</span>
+          <span class="feature-pill">Security Grade</span>
+          <span class="feature-pill">AI Analysis</span>
+          <span class="feature-pill">SEO & DNS</span>
+          <span class="feature-pill">Performance</span>
         </div>
         
         <form id="analyze-form" class="input-group glass-panel p-2" style="max-width:600px; margin:0 auto;">
@@ -51,7 +51,7 @@ const schemaData = {
             type="url" 
             id="url-input" 
             class="search-input" 
-            placeholder="Enter competitor URL (e.g., https://stripe.com)" 
+            placeholder="Enter a URL (e.g., https://stripe.com)" 
             required 
             pattern="https?://.*"
           />
@@ -60,10 +60,10 @@ const schemaData = {
             <span id="btn-loader" class="loader" style="display: none;"></span>
           </button>
         </form>
-        <div id="error-message" class="text-red-500 mt-4 text-sm hidden" style="color: #ff4b4b;"></div>
+        <div id="error-message" class="error-msg text-sm hidden"></div>
         <div id="history-message" class="text-secondary mt-2 text-sm hidden"></div>
         
-        <button id="download-pdf-btn" class="glass-panel text-sm hidden" style="margin-top:1.5rem; padding:0.5rem 1rem; cursor:pointer; font-family:'Outfit'; font-weight:600; color:hsl(var(--text-primary)); display:inline-flex; align-items:center; gap:0.5rem;">
+        <button id="download-pdf-btn" class="btn-secondary text-sm hidden" style="margin-top:1.5rem;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Download PDF Report
         </button>
@@ -118,100 +118,166 @@ const schemaData = {
 
   <style>
     .hero {
-      min-height: 50vh;
+      min-height: 55vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       position: relative;
       overflow: hidden;
+      padding: 6rem 0 4rem;
     }
     
-    /* Animated background orbs */
     .hero-orbs {
       position: absolute;
       inset: 0;
       pointer-events: none;
       overflow: hidden;
     }
+
     .orb {
       position: absolute;
       border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.3;
+      filter: blur(100px);
+      opacity: 0.2;
     }
+
     .orb-1 {
-      width: 400px;
-      height: 400px;
+      width: 420px;
+      height: 420px;
       background: hsl(var(--accent-primary));
-      top: -100px;
-      right: -100px;
-      animation: orbit1 12s ease-in-out infinite;
+      top: -120px;
+      right: -80px;
+      animation: orbit1 14s ease-in-out infinite;
     }
+
     .orb-2 {
       width: 350px;
       height: 350px;
       background: hsl(var(--accent-secondary));
-      bottom: -120px;
-      left: -80px;
-      animation: orbit2 15s ease-in-out infinite;
-    }
-    @keyframes orbit1 {
-      0%, 100% { transform: translate(0, 0); }
-      50% { transform: translate(-60px, 60px); }
-    }
-    @keyframes orbit2 {
-      0%, 100% { transform: translate(0, 0); }
-      50% { transform: translate(50px, -50px); }
+      bottom: -100px;
+      left: -60px;
+      animation: orbit2 18s ease-in-out infinite;
     }
 
-    /* Feature pills */
+    .orb-3 {
+      width: 200px;
+      height: 200px;
+      background: hsl(var(--accent-warm));
+      top: 40%;
+      left: 50%;
+      animation: orbit3 20s ease-in-out infinite;
+      opacity: 0.1;
+    }
+
+    @keyframes orbit1 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(-50px, 50px); }
+    }
+
+    @keyframes orbit2 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(40px, -40px); }
+    }
+
+    @keyframes orbit3 {
+      0%, 100% { transform: translate(-50%, -50%); }
+      50% { transform: translate(-30%, -70%); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: hsla(var(--accent-primary), 0.08);
+      border: 1px solid hsla(var(--accent-primary), 0.2);
+      border-radius: 99px;
+      padding: 0.35rem 1rem;
+      font-size: 0.78rem;
+      color: hsl(var(--accent-primary));
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    .trust-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: hsl(var(--accent-primary));
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero-title {
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      margin-bottom: 0.75rem;
+      line-height: 1.1;
+    }
+
+    @media (min-width: 768px) {
+      .hero-title { font-size: 5rem; }
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: hsl(var(--text-secondary));
+      max-width: 36rem;
+      margin: 0 auto 1.75rem;
+      line-height: 1.6;
+    }
+
+    @media (min-width: 768px) {
+      .hero-subtitle { font-size: 1.35rem; }
+    }
+
+    .feature-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.4rem;
+      margin-bottom: 2rem;
+    }
+
     .feature-pill {
       display: inline-flex;
       align-items: center;
-      padding: 0.35rem 0.85rem;
+      padding: 0.3rem 0.75rem;
       border-radius: 99px;
-      font-size: 0.78rem;
-      font-weight: 500;
+      font-size: 0.75rem;
+      font-weight: 600;
       color: hsl(var(--text-secondary));
-      background: hsla(var(--text-primary), 0.06);
-      border: 1px solid hsla(var(--text-primary), 0.08);
-      transition: all 0.3s ease;
-    }
-    .feature-pill:hover {
-      color: hsl(var(--text-primary));
-      border-color: hsl(var(--accent-primary));
-      background: hsla(var(--accent-primary), 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.25s ease;
     }
 
-    .text-center { text-align: center; }
-    .pt-24 { padding-top: 6rem; }
-    .pb-16 { padding-bottom: 4rem; }
-    .pb-24 { padding-bottom: 6rem; }
-    .mb-4 { margin-bottom: 1rem; }
-    .mb-12 { margin-bottom: 3rem; }
-    .mt-4 { margin-top: 1rem; }
-    
-    .text-5xl { font-size: 3rem; }
-    .text-7xl { font-size: 4.5rem; }
-    .text-xl { font-size: 1.25rem; }
-    .text-2xl { font-size: 1.5rem; }
-    .text-sm { font-size: 0.875rem; }
-    
-    .font-extrabold { font-weight: 800; }
-    .tracking-tight { letter-spacing: -0.025em; }
-    
-    .max-w-2xl { max-width: 42rem; }
-    .mx-auto { margin-left: auto; margin-right: auto; }
-    
-    .text-secondary { color: hsl(var(--text-secondary)); }
-    .hidden { display: none !important; }
-    
+    .feature-pill:hover {
+      color: hsl(var(--accent-primary));
+      border-color: hsla(var(--accent-primary), 0.3);
+      background: hsla(var(--accent-primary), 0.06);
+    }
+
+    .error-msg {
+      color: hsl(var(--danger));
+      margin-top: 1rem;
+    }
+
     /* Bento Grid Layout for Results */
     .results-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
+      gap: 1.25rem;
       width: 100%;
       max-width: 1000px;
       margin: 2rem auto 0;
@@ -225,10 +291,10 @@ const schemaData = {
     }
     
     :global(.category-title) {
-      font-size: 1.25rem;
-      font-weight: 600;
+      font-size: 1.1rem;
+      font-weight: 700;
       color: hsl(var(--text-primary));
-      border-bottom: 1px solid hsla(var(--text-primary), 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       padding-bottom: 0.5rem;
       margin-bottom: 0.5rem;
     }
@@ -236,63 +302,65 @@ const schemaData = {
     :global(.tech-list) {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
     
     @media (max-width: 768px) {
-      .text-5xl { font-size: 2.5rem; }
-      .text-7xl { font-size: 3.5rem; }
-      .results-grid {
-        grid-template-columns: 1fr;
-      }
-      .orb { opacity: 0.15; }
+      .results-grid { grid-template-columns: 1fr; }
+      .orb { opacity: 0.1; }
     }
 
-    /* Collapsible report sections */
     .report-section {
       grid-column: 1 / -1;
-      border: 1px solid hsla(var(--text-primary), 0.08);
-      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-md);
       overflow: hidden;
-      background: rgba(255,255,255, 0.02);
+      background: rgba(255, 255, 255, 0.015);
     }
+
     .report-section summary {
       display: flex;
       align-items: center;
       gap: 0.75rem;
       padding: 0.85rem 1.25rem;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: hsl(var(--text-primary));
       list-style: none;
       user-select: none;
-      border-bottom: 1px solid hsla(var(--text-primary), 0.06);
-      transition: background 0.2s;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background var(--transition-fast);
     }
-    .report-section summary:hover { background: rgba(255,255,255,0.03); }
+
+    .report-section summary:hover { background: rgba(255, 255, 255, 0.025); }
     .report-section summary::-webkit-details-marker { display: none; }
+
     .report-section summary::after {
       content: '▸';
       margin-left: auto;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: transform 0.25s;
-      color: hsl(var(--text-secondary));
+      color: hsl(var(--text-muted));
     }
+
     .report-section[open] summary::after { transform: rotate(90deg); }
+
     .report-section .section-body {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 1rem;
       padding: 1rem;
     }
+
     .report-section .section-badge {
       font-size: 0.6rem;
       padding: 2px 8px;
       border-radius: 99px;
-      background: hsla(var(--accent-primary), 0.12);
+      background: hsla(var(--accent-primary), 0.1);
       color: hsl(var(--accent-primary));
     }
+
     @media (max-width: 768px) {
       .report-section .section-body { grid-template-columns: 1fr; }
     }
@@ -328,12 +396,12 @@ const schemaData = {
           margin:       0.5,
           filename:     `SiteIntelica_Report_${currentScanUrl.replace(/[^a-z0-9]/gi, '_')}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#18191e' },
+          html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0f1117' },
           jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
         
         const originalBg = element.style.background;
-        element.style.background = '#18191e'; // Ensure dark mode background in PDF
+        element.style.background = '#0f1117';
         element.style.padding = '1rem';
         
         window.html2pdf().set(opt).from(element).save().then(() => {

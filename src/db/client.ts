@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 // Store DB in the project root for persistence across dev reloads
 const dbPath = join(process.cwd(), 'siteintelica_scans.db');
-const db = new Database(dbPath, { verbose: console.log });
+const db = new Database(dbPath);
 
 // Initialize Schema
 db.exec(`
@@ -127,13 +127,17 @@ export function getTrendsData() {
 
 export function getUserScans(userId: string, limit: number = 50) {
   try {
-    // Join scans with a user lookup — for now we match by the domain being scanned while logged in.
-    // A future upgrade could add a user_id column to scans.
-    const stmt = db.prepare('SELECT id, domain, scanned_at FROM scans ORDER BY scanned_at DESC LIMIT ?');
-    return stmt.all(limit) as { id: number, domain: string, scanned_at: string }[];
-  } catch (error) {
-    console.error('Failed to retrieve user scans:', error);
-    return [];
+    const stmt = db.prepare('SELECT id, domain, scanned_at FROM scans WHERE user_id = ? ORDER BY scanned_at DESC LIMIT ?');
+    return stmt.all(userId, limit) as { id: number, domain: string, scanned_at: string }[];
+  } catch {
+    // Fallback: if user_id column doesn't exist yet, return all scans
+    try {
+      const fallback = db.prepare('SELECT id, domain, scanned_at FROM scans ORDER BY scanned_at DESC LIMIT ?');
+      return fallback.all(limit) as { id: number, domain: string, scanned_at: string }[];
+    } catch (error) {
+      console.error('Failed to retrieve user scans:', error);
+      return [];
+    }
   }
 }
 

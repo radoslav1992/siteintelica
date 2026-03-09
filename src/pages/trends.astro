@@ -4,7 +4,6 @@ import { getTrendsData } from '../db/client';
 
 export const prerender = false;
 
-// Fetch aggregated data from the local SQLite database
 const trends = getTrendsData();
 
 const schemaData = {
@@ -18,41 +17,36 @@ const schemaData = {
 <Layout title="Global Tech Trends" description="Discover the most popular frontend frameworks, CMS platforms, and ad networks based on thousands of real-time website scans.">
   <script is:inline type="application/ld+json" set:html={JSON.stringify(schemaData)} />
   
-  <div class="container pb-24">
-    <header class="text-center pt-24 pb-12">
-      <h1 class="text-gradient text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">Global Tech Trends</h1>
-      <p class="text-xl text-secondary max-w-2xl mx-auto mb-8">
-        Aggregated insights from <strong style="color:hsl(var(--text-primary))">{trends.totalScans.toLocaleString()}</strong> recent website scans. Discover what the internet is built on today.
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Global Tech Trends</h1>
+      <p class="text-secondary text-lg">
+        Aggregated insights from <strong style="color:hsl(var(--text-primary))">{trends.totalScans.toLocaleString()}</strong> recent website scans.
       </p>
     </header>
 
     <div class="trends-grid">
-      <!-- Top Technologies -->
-      <section class="glass-panel p-6 animate-fade-in" style="animation-delay: 0.1s;">
-        <h2 class="category-title text-2xl mb-6 flex items-center gap-2">
-           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-accent-primary"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-           Most Popular Technologies
+      <section class="glass-panel trend-section animate-fade-in" style="animation-delay: 0.05s;">
+        <h2 class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:hsl(var(--accent-primary))"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+          Most Popular Technologies
         </h2>
         
-        <div class="flex flex-col gap-4">
+        <div class="trend-list">
           {trends.topTechnologies.length > 0 ? trends.topTechnologies.map((tech, index) => {
-             // Calculate percentage relative to the #1 item to draw a nice bar
-             const maxCount = trends.topTechnologies[0].count || 1;
-             const widthPercent = Math.max(5, (tech.count / maxCount) * 100);
-             
-             return (
-              <div class="trend-item group">
-                <div class="flex justify-between items-end mb-1">
-                  <span class="font-semibold" style="color:hsl(var(--text-primary))">
-                    <span class="text-secondary mr-2" style="font-size: 0.8em;">#{index + 1}</span>
+            const maxCount = trends.topTechnologies[0].count || 1;
+            const widthPercent = Math.max(5, (tech.count / maxCount) * 100);
+            return (
+              <div class="trend-item">
+                <div class="trend-item-header">
+                  <span class="trend-name">
+                    <span class="trend-rank">#{index + 1}</span>
                     {tech.name}
                   </span>
-                  <span class="text-sm font-mono text-secondary group-hover:text-accent-primary transition-colors">{tech.count.toLocaleString()} scans</span>
+                  <span class="trend-count">{tech.count.toLocaleString()} scans</span>
                 </div>
-                <div class="progress-bg w-full h-2 rounded-full overflow-hidden" style="background: hsla(var(--text-primary), 0.1);">
-                  <div class="progress-bar h-full rounded-full transition-all duration-1000 ease-out" 
-                       style={`width: ${widthPercent}%; background: linear-gradient(90deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));`}>
-                  </div>
+                <div class="progress-bg">
+                  <div class="progress-bar progress-primary" style={`width: ${widthPercent}%;`}></div>
                 </div>
               </div>
             );
@@ -62,35 +56,29 @@ const schemaData = {
         </div>
       </section>
 
-      <!-- Top Categories -->
-      <section class="glass-panel p-6 animate-fade-in" style="animation-delay: 0.2s;">
-         <h2 class="category-title text-2xl mb-6 flex items-center gap-2">
-           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-accent-secondary"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-           Top Technology Categories
+      <section class="glass-panel trend-section animate-fade-in" style="animation-delay: 0.1s;">
+        <h2 class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:hsl(var(--accent-secondary))"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+          Top Technology Categories
         </h2>
         
-        <div class="flex flex-col gap-4">
+        <div class="trend-list">
           {trends.topCategories.length > 0 ? trends.topCategories.map((cat, index) => {
-             const maxCount = trends.topCategories[0].count || 1;
-             const widthPercent = Math.max(5, (cat.count / maxCount) * 100);
-             
-             return (
-              <div class="trend-item group">
-                <div class="flex justify-between items-end mb-1">
-                  <span class="font-semibold" style="color:hsl(var(--text-primary))">
-                    {cat.name}
-                  </span>
-                  <span class="text-sm font-mono text-secondary group-hover:text-accent-secondary transition-colors">{cat.count.toLocaleString()}</span>
+            const maxCount = trends.topCategories[0].count || 1;
+            const widthPercent = Math.max(5, (cat.count / maxCount) * 100);
+            return (
+              <div class="trend-item">
+                <div class="trend-item-header">
+                  <span class="trend-name">{cat.name}</span>
+                  <span class="trend-count">{cat.count.toLocaleString()}</span>
                 </div>
-                 <div class="progress-bg w-full h-2 rounded-full overflow-hidden" style="background: hsla(var(--text-primary), 0.1);">
-                  <div class="progress-bar h-full rounded-full transition-all duration-1000 ease-out" 
-                       style={`width: ${widthPercent}%; background: hsl(var(--accent-secondary)); opacity: 0.8;`}>
-                  </div>
+                <div class="progress-bg">
+                  <div class="progress-bar progress-secondary" style={`width: ${widthPercent}%;`}></div>
                 </div>
               </div>
             );
           }) : (
-             <div class="text-secondary text-center py-8">Not enough data collected yet.</div>
+            <div class="text-secondary text-center py-8">Not enough data collected yet.</div>
           )}
         </div>
       </section>
@@ -98,68 +86,114 @@ const schemaData = {
   </div>
 
   <style>
+    .page-content {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+
     .trends-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 2rem;
+      gap: 1.5rem;
       max-width: 1200px;
       margin: 0 auto;
     }
-    
+
     @media (min-width: 1024px) {
       .trends-grid {
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 3fr 2fr;
       }
     }
-    
-    .category-title {
-      border-bottom: 1px solid hsla(var(--text-primary), 0.1);
-      padding-bottom: 1rem;
+
+    .trend-section {
+      padding: 1.75rem;
     }
-    
-    .flex { display: flex; }
-    .flex-col { flex-direction: column; }
-    .justify-between { justify-content: space-between; }
-    .items-end { align-items: flex-end; }
-    .items-center { align-items: center; }
-    .gap-2 { gap: 0.5rem; }
-    .gap-4 { gap: 1rem; }
-    .mb-1 { margin-bottom: 0.25rem; }
-    .mb-6 { margin-bottom: 1.5rem; }
-    .mr-2 { margin-right: 0.5rem; }
-    .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
-    
-    .text-sm { font-size: 0.875rem; }
-    .text-2xl { font-size: 1.5rem; }
-    .font-semibold { font-weight: 600; }
-    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    
-    .w-full { width: 100%; }
-    .h-2 { height: 0.5rem; }
-    .h-full { height: 100%; }
-    .rounded-full { border-radius: 9999px; }
-    .overflow-hidden { overflow: hidden; }
-    
-    .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
-    .transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
-    .duration-1000 { transition-duration: 1000ms; }
-    .ease-out { transition-timing-function: cubic-bezier(0, 0, 0.2, 1); }
-    
-    .text-accent-primary { color: hsl(var(--accent-primary)); }
-    .text-accent-secondary { color: hsl(var(--accent-secondary)); }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .trend-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .trend-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 0.3rem;
+    }
+
+    .trend-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .trend-rank {
+      color: hsl(var(--text-muted));
+      font-size: 0.78rem;
+      margin-right: 0.4rem;
+    }
+
+    .trend-count {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: hsl(var(--text-secondary));
+    }
+
+    .progress-bg {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s ease-out;
+    }
+
+    .progress-primary {
+      background: linear-gradient(90deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+    }
+
+    .progress-secondary {
+      background: hsl(var(--accent-secondary));
+      opacity: 0.8;
+    }
   </style>
   
   <script>
-    // Simple animation for progress bars on load
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
-        const bars = document.querySelectorAll('.progress-bar');
-        bars.forEach(bar => {
-          const w = (bar as HTMLElement).style.width;
-          (bar as HTMLElement).style.width = '0%';
-          setTimeout(() => {
-            (bar as HTMLElement).style.width = w;
-          }, 50);
+        document.querySelectorAll('.progress-bar').forEach(bar => {
+          const el = bar as HTMLElement;
+          const w = el.style.width;
+          el.style.width = '0%';
+          setTimeout(() => { el.style.width = w; }, 50);
         });
       }, 100);
     });
