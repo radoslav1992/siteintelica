@@ -137,11 +137,52 @@ if (!user) {
               ${onlyB.length === 0 ? '<span style="color:hsl(var(--text-secondary)); font-size:0.85rem;">None.</span>' : ''}
             </div>
           </div>
+
+          <!-- AI Competitor Gap Analysis -->
+          <div class="glass-panel p-6 animate-fade-in" style="margin-bottom:1rem; animation-delay:0.25s; border-top:3px solid #FFD700;">
+            <h3 class="category-title">🤖 AI Competitor Gap Analysis <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span></h3>
+            <button id="btnGap" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--accent-primary), 0.3); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.85rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='hsl(var(--accent-primary))'" onmouseout="this.style.borderColor='hsla(var(--accent-primary), 0.3)'">
+              🔍 Generate AI Gap Report for ${domainA} vs ${domainB}
+            </button>
+            <div id="gapOutput" style="margin-top:1rem; display:none; padding:1rem; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.82rem; line-height:1.6; white-space:pre-wrap; max-height:400px; overflow-y:auto;"></div>
+          </div>
         `;
 
         results.classList.remove('hidden');
         status.innerText = 'Comparison complete!';
         status.style.color = '#00e676';
+
+        // Wire up AI Gap button
+        const gapBtn = document.getElementById('btnGap');
+        const gapOutput = document.getElementById('gapOutput');
+        if (gapBtn && gapOutput) {
+          gapBtn.addEventListener('click', async () => {
+            gapBtn.disabled = true;
+            gapBtn.style.opacity = '0.5';
+            gapOutput.style.display = 'block';
+            gapOutput.textContent = 'Running AI competitive gap analysis...';
+            try {
+              const res = await fetch('/api/ai/competitor-gap', {
+                method: 'POST',
+                body: JSON.stringify({ domainA, domainB }),
+                headers: { 'Content-Type': 'application/json' }
+              });
+              const result = await res.json();
+              if (result.analysis) {
+                gapOutput.innerHTML = result.analysis
+                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/##\s?(.*?)\n/g, '<h4 style="margin:0.75rem 0 0.25rem; color:hsl(var(--accent-primary));">$1</h4>')
+                  .replace(/\n/g, '<br/>');
+              } else {
+                gapOutput.textContent = 'Error: ' + (result.error || 'Unknown error');
+              }
+            } catch {
+              gapOutput.textContent = 'Network error generating gap analysis.';
+            }
+            gapBtn.disabled = false;
+            gapBtn.style.opacity = '1';
+          });
+        }
 
       } catch (err: any) {
         status.innerText = 'Error: ' + (err.message || 'Failed to compare.');

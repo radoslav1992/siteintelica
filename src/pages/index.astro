@@ -1121,6 +1121,9 @@ const schemaData = {
             <button id="btnAiUpgrade" style="padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--text-primary), 0.15); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='#ffa726'" onmouseout="this.style.borderColor='hsla(var(--text-primary), 0.15)'">
               ⬆️ Upgrade Tips
             </button>
+            <button id="btnAiSeo" style="padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--text-primary), 0.15); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='#00e676'" onmouseout="this.style.borderColor='hsla(var(--text-primary), 0.15)'">
+              🔍 SEO Scorecard
+            </button>
           </div>
           <div id="aiOutput" style="margin-top:1rem; display:none; padding:1rem; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.82rem; line-height:1.6; white-space:pre-wrap; color:hsl(var(--text-primary)); max-height:400px; overflow-y:auto;"></div>
         `;
@@ -1166,6 +1169,30 @@ const schemaData = {
         aiCard.querySelector('#btnAiSummary').addEventListener('click', function() { callAi('/api/ai/summary', this); });
         aiCard.querySelector('#btnAiEmail').addEventListener('click', function() { callAi('/api/ai/email', this); });
         aiCard.querySelector('#btnAiUpgrade').addEventListener('click', function() { callAi('/api/ai/upgrades', this); });
+        aiCard.querySelector('#btnAiSeo').addEventListener('click', function() {
+          const btn = this;
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          aiOutput.style.display = 'block';
+          aiOutput.textContent = 'Running full SEO analysis with AI...';
+          fetch('/api/ai/seo-audit', {
+            method: 'POST',
+            body: JSON.stringify({ domain: scanDomain }),
+            headers: { 'Content-Type': 'application/json' }
+          }).then(r => r.json()).then(result => {
+            if (result.report) {
+              aiOutput.innerHTML = result.report.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/##\s?(.*?)\n/g, '<h4 style="margin:0.75rem 0 0.25rem; color:hsl(var(--accent-primary));">$1</h4>').replace(/\n/g, '<br/>');
+            } else {
+              aiOutput.textContent = 'Error: ' + (result.error || 'Unknown error');
+            }
+            btn.disabled = false;
+            btn.style.opacity = '1';
+          }).catch(() => {
+            aiOutput.textContent = 'Network error generating SEO report.';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+          });
+        });
       }
 
       // 2.73 Free Tier Teaser
