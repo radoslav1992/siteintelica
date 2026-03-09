@@ -1,12 +1,21 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+let GoogleGenerativeAI: any = null;
+
+// Dynamic import to prevent crashes if the package is not installed
+try {
+    const mod = await import('@google/generative-ai');
+    GoogleGenerativeAI = mod.GoogleGenerativeAI;
+} catch {
+    // Package not installed — AI will use local fallback
+}
 
 const MODEL_NAME = 'gemini-3.1-flash-lite-preview';
 
-let genAI: GoogleGenerativeAI | null = null;
+let genAI: any = null;
 
-function getClient(): GoogleGenerativeAI | null {
+function getClient(): any {
+    if (!GoogleGenerativeAI) return null;
     if (genAI) return genAI;
-    const key = process.env.GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+    const key = process.env.GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
     if (!key || key === 'your_api_key_here') return null;
     genAI = new GoogleGenerativeAI(key);
     return genAI;
