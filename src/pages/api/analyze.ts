@@ -220,20 +220,33 @@ export const POST: APIRoute = async (context) => {
 
     if (isPremium) {
       try {
-        subdomains = await enumerateSubdomains(domain);
+        // Run subdomain enumeration and Rust port scanner concurrently
+        // with a hard 10-second timeout to prevent blocking the entire scan
+        const premiumTimeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Premium features timed out')), 10000)
+        );
 
-        // Pass off the port scanning to our high-performance Rust Engine
-        const engineRes = await fetch('http://localhost:8080/scan/ports', {
-          method: 'POST',
-          body: JSON.stringify({ host: domain }),
-          headers: { 'Content-Type': 'application/json' }
-        });
+        const premiumWork = async () => {
+          const [subs, engineRes] = await Promise.allSettled([
+            enumerateSubdomains(domain),
+            fetch('http://127.0.0.1:8080/scan/ports', {
+              method: 'POST',
+              body: JSON.stringify({ host: domain }),
+              headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(8000) // 8s fetch timeout
+            })
+          ]);
 
-        if (engineRes.ok) {
-          openPorts = await engineRes.json();
-        }
+          if (subs.status === 'fulfilled') subdomains = subs.value;
+          if (engineRes.status === 'fulfilled' && engineRes.value.ok) {
+            openPorts = await engineRes.value.json();
+          }
+        };
+
+        await Promise.race([premiumWork(), premiumTimeout]);
       } catch (e) {
-        console.error("Premium features error:", e);
+        console.error("Premium features error (non-fatal):", e);
+        // Scan still succeeds with Free tier data
       }
     }
 
