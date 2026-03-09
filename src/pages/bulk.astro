@@ -1,0 +1,152 @@
+---
+import Layout from '../layouts/Layout.astro';
+export const prerender = false;
+---
+
+<Layout title="Bulk Scanner">
+  <div class="container" style="max-width:900px; margin:0 auto; padding:2rem 1rem;">
+    <header style="text-align:center; margin-bottom:2rem;">
+      <h1 style="font-size:2.2rem; font-weight:800;">⚡ Bulk Scanner</h1>
+      <p style="color:hsl(var(--text-secondary)); margin-top:0.5rem;">Scan multiple websites at once. Paste one URL per line.</p>
+    </header>
+
+    <div class="glass-panel" style="padding:1.5rem;">
+      <textarea id="bulk-urls" rows="8" placeholder="https://stripe.com&#10;https://github.com&#10;https://shopify.com"
+        style="width:100%; background:rgba(255,255,255,0.03); border:1px solid hsla(var(--text-primary),0.12); border-radius:8px; padding:0.75rem; color:hsl(var(--text-primary)); font-family:monospace; font-size:0.85rem; resize:vertical;"></textarea>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; flex-wrap:wrap; gap:0.75rem;">
+        <div>
+          <span id="url-count" style="font-size:0.8rem; color:hsl(var(--text-secondary));">0 URLs</span>
+        </div>
+        <div style="display:flex; gap:0.75rem;">
+          <button id="export-csv" class="btn-secondary" style="display:none; padding:0.5rem 1rem; border-radius:8px; background:rgba(0,230,118,0.15); color:#00e676; border:1px solid rgba(0,230,118,0.3); cursor:pointer; font-weight:600; font-size:0.85rem;">
+            📥 Export CSV
+          </button>
+          <button id="start-bulk" style="padding:0.6rem 1.5rem; border-radius:8px; background:hsl(var(--accent-primary)); color:#000; border:none; cursor:pointer; font-weight:700; font-size:0.9rem;">
+            🚀 Start Scanning
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progress-area" class="glass-panel" style="display:none; margin-top:1.5rem; padding:1rem 1.25rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span style="font-weight:600;">Scanning...</span>
+        <span id="progress-text" style="font-size:0.85rem; color:hsl(var(--text-secondary));">0/0</span>
+      </div>
+      <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+        <div id="progress-bar" style="height:100%; width:0%; background:hsl(var(--accent-primary)); border-radius:4px; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="bulk-results" style="margin-top:1.5rem;"></div>
+  </div>
+
+  <script>
+    const textarea = document.getElementById('bulk-urls') as HTMLTextAreaElement;
+    const urlCount = document.getElementById('url-count')!;
+    const startBtn = document.getElementById('start-bulk') as HTMLButtonElement;
+    const exportBtn = document.getElementById('export-csv') as HTMLButtonElement;
+    const progressArea = document.getElementById('progress-area')!;
+    const progressBar = document.getElementById('progress-bar')!;
+    const progressText = document.getElementById('progress-text')!;
+    const resultsArea = document.getElementById('bulk-results')!;
+
+    let scanResults: any[] = [];
+
+    function getUrls(): string[] {
+      return textarea.value.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 0)
+        .map(l => l.startsWith('http') ? l : `https://${l}`);
+    }
+
+    textarea.addEventListener('input', () => {
+      const count = getUrls().length;
+      urlCount.textContent = `${count} URL${count !== 1 ? 's' : ''}`;
+    });
+
+    startBtn.addEventListener('click', async () => {
+      const urls = getUrls();
+      if (urls.length === 0) return;
+
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.5';
+      progressArea.style.display = 'block';
+      resultsArea.innerHTML = '';
+      scanResults = [];
+      exportBtn.style.display = 'none';
+
+      for (let i = 0; i < urls.length; i++) {
+        progressText.textContent = `${i + 1}/${urls.length}`;
+        progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
+
+        const url = urls[i];
+        const card = document.createElement('div');
+        card.className = 'glass-panel';
+        card.style.cssText = 'padding:0.85rem 1.25rem; margin-bottom:0.5rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid transparent;';
+
+        try {
+          const domain = new URL(url).hostname;
+          card.innerHTML = `<div><strong>${domain}</strong> <span style="font-size:0.75rem; color:hsl(var(--text-secondary));">scanning...</span></div>`;
+          resultsArea.appendChild(card);
+
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+          });
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+
+          const techCount = data.technologies?.length || 0;
+          const perf = data.performance?.performanceScore ?? '—';
+          const seo = data.performance?.seoScore ?? '—';
+          const grade = data.securityGrade?.grade || '—';
+
+          card.style.borderLeftColor = '#00e676';
+          card.innerHTML = `
+            <div>
+              <a href="/?scan=${url}" style="font-weight:700; color:inherit; text-decoration:none;">${domain}</a>
+              <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:2px;">${techCount} technologies</div>
+            </div>
+            <div style="display:flex; gap:0.75rem; align-items:center;">
+              <span class="badge" style="font-size:0.7rem;">Perf: ${perf}</span>
+              <span class="badge" style="font-size:0.7rem;">SEO: ${seo}</span>
+              <span class="badge" style="font-size:0.7rem; ${grade === 'A' || grade === 'A+' ? 'color:#00e676;' : grade === 'F' ? 'color:#ff4b4b;' : ''}">Sec: ${grade}</span>
+            </div>
+          `;
+
+          scanResults.push({ domain, techCount, perf, seo, securityGrade: grade, status: 'OK' });
+        } catch (err) {
+          card.style.borderLeftColor = '#ff4b4b';
+          const domain = (() => { try { return new URL(url).hostname; } catch { return url; } })();
+          card.innerHTML = `<div><strong>${domain}</strong></div><span class="badge" style="color:#ff4b4b; font-size:0.7rem;">Failed</span>`;
+          scanResults.push({ domain, techCount: 0, perf: 0, seo: 0, securityGrade: '—', status: 'FAILED' });
+        }
+      }
+
+      progressText.textContent = `Done! ${urls.length}/${urls.length}`;
+      startBtn.disabled = false;
+      startBtn.style.opacity = '1';
+      exportBtn.style.display = 'inline-block';
+    });
+
+    exportBtn.addEventListener('click', () => {
+      if (scanResults.length === 0) return;
+      const headers = ['Domain', 'Technologies', 'Performance', 'SEO', 'Security Grade', 'Status'];
+      const rows = scanResults.map(r => [r.domain, r.techCount, r.perf, r.seo, r.securityGrade, r.status]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `siteintelica-bulk-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</Layout>

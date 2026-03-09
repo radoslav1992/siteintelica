@@ -1,48 +1,79 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getUserScans } from '../db/client';
+import { getRecentScans } from '../db/client';
+export const prerender = false;
 
-const user = Astro.locals.user;
-if (!user) {
-  return Astro.redirect("/login");
-}
+const scans = getRecentScans(100);
 
-const scans = getUserScans(user.id, 100);
+// Group scans by domain
+const domainMap = new Map<string, { count: number; lastScanned: string }>();
+scans.forEach(s => {
+  const existing = domainMap.get(s.domain);
+  if (existing) {
+    existing.count++;
+  } else {
+    domainMap.set(s.domain, { count: 1, lastScanned: s.scanned_at });
+  }
+});
+const domains = [...domainMap.entries()].map(([domain, info]) => ({ domain, ...info }));
 ---
 
-<Layout title="Scan History | SiteIntelica">
-  <div class="container pt-32 pb-24">
-    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 3rem; text-align: center;">
-      <h1 class="text-4xl font-extrabold text-gradient">Scan History</h1>
-      <p class="text-secondary text-lg">Your complete timeline of intelligence reports.</p>
+<Layout title="Scan History">
+  <div class="container" style="max-width:900px; margin:0 auto; padding:2rem 1rem;">
+    <header style="text-align:center; margin-bottom:2rem;">
+      <h1 style="font-size:2.2rem; font-weight:800;">📜 Scan History</h1>
+      <p style="color:hsl(var(--text-secondary)); margin-top:0.5rem;">All previously scanned domains</p>
+    </header>
+
+    <div id="filter-bar" class="glass-panel" style="display:flex; gap:1rem; align-items:center; padding:0.75rem 1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+      <input type="text" id="search-filter" placeholder="Filter domains..." 
+             style="flex:1; min-width:200px; background:transparent; border:1px solid hsla(var(--text-primary),0.12); border-radius:8px; padding:0.5rem 0.75rem; color:hsl(var(--text-primary)); font-size:0.85rem;" />
+      <span style="font-size:0.8rem; color:hsl(var(--text-secondary));">{domains.length} unique domains &middot; {scans.length} total scans</span>
     </div>
 
-    <div style="max-width: 800px; margin: 0 auto;">
-      {scans.length === 0 ? (
-        <div class="glass-panel p-6 animate-fade-in" style="text-align: center;">
-          <p class="text-secondary">No scans yet. Go to the <a href="/" style="color:hsl(var(--accent-primary)); text-decoration:underline;">homepage</a> and scan your first URL!</p>
+    <div id="history-list">
+      {domains.length === 0 ? (
+        <div class="glass-panel" style="text-align:center; padding:3rem;">
+          <p style="font-size:1.1rem; font-weight:600;">No scans yet</p>
+          <p style="color:hsl(var(--text-secondary)); margin-top:0.5rem;">
+            Go to the <a href="/" style="color:hsl(var(--accent-primary));">Spy Tool</a> to scan your first website.
+          </p>
         </div>
       ) : (
-        scans.map((scan, i) => (
-          <div class="glass-panel p-6 animate-fade-in" style={`margin-bottom: 1rem; animation-delay: ${i * 0.05}s; display:flex; justify-content:space-between; align-items:center;`}>
-            <div style="display:flex; align-items:center; gap:1rem;">
-              <img src={`https://logo.clearbit.com/${scan.domain}`} alt="" width="32" height="32" style="border-radius:6px; background:rgba(255,255,255,0.1);" onerror="this.style.display='none'" />
-              <div>
-                <a href={`/report/${scan.domain}`} style="color:hsl(var(--accent-primary)); font-weight:600; font-size:1rem; text-decoration:none;">
-                  {scan.domain}
-                </a>
-                <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:2px;">
-                  {new Date(scan.scanned_at + ' Z').toLocaleString()}
-                </div>
+        domains.map((item) => (
+          <div class="history-item glass-panel" data-domain={item.domain} style="display:flex; justify-content:space-between; align-items:center; padding:0.85rem 1.25rem; margin-bottom:0.75rem; border-radius:10px; transition:border-color 0.2s;">
+            <div>
+              <div style="font-weight:700; font-size:0.95rem;">{item.domain}</div>
+              <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:2px;">
+                Last scanned: {new Date(item.lastScanned + ' Z').toLocaleString()} &middot; {item.count} scan{item.count > 1 ? 's' : ''}
               </div>
             </div>
             <div style="display:flex; gap:0.5rem;">
-              <a href={`/report/${scan.domain}`} class="badge" style="text-decoration:none; cursor:pointer;">View Report</a>
-              <button class="badge" style="cursor:pointer; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary)); border:none;" onclick={`window.location.href='/?scan=https://${scan.domain}'`}>Re-scan</button>
+              <a href={`/?scan=https://${item.domain}`} class="btn-action" style="font-size:0.75rem; padding:0.4rem 0.85rem; border-radius:6px; background:hsla(var(--accent-primary),0.15); color:hsl(var(--accent-primary)); text-decoration:none; font-weight:600; white-space:nowrap;">
+                🔄 Re-scan
+              </a>
             </div>
           </div>
         ))
       )}
     </div>
   </div>
+
+  <style>
+    .history-item { border-left: 3px solid transparent; }
+    .history-item:hover { border-left-color: hsl(var(--accent-primary)); }
+    .btn-action:hover { filter: brightness(1.2); }
+  </style>
+
+  <script>
+    const filter = document.getElementById('search-filter') as HTMLInputElement;
+    const items = document.querySelectorAll('.history-item');
+    filter?.addEventListener('input', () => {
+      const q = filter.value.toLowerCase();
+      items.forEach(item => {
+        const domain = (item as HTMLElement).dataset.domain || '';
+        (item as HTMLElement).style.display = domain.includes(q) ? '' : 'none';
+      });
+    });
+  </script>
 </Layout>
