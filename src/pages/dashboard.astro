@@ -1,10 +1,17 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
+import db from '../db/client';
+
 const user = Astro.locals.user;
 if (!user) {
 	return Astro.redirect("/login");
 }
+
+// Fetch fresh user data to get webhook_url
+const stmt = db.prepare('SELECT webhook_url FROM user WHERE id = ?');
+const userData = stmt.get(user.id) as { webhook_url: string | null } | undefined;
+const webhookUrl = userData?.webhook_url || '';
 ---
 
 <Layout title="Dashboard | SiteIntelica">
@@ -36,6 +43,19 @@ if (!user) {
   -H "Content-Type: application/json" \
   -d '&#123;"url":"https://stripe.com"&#125;'</code>
         </div>
+    </div>
+
+    <!-- Webhook Integration Card -->
+    <div class="glass-panel p-6 animate-fade-in" style="max-width: 800px; margin: 0 auto 2rem; border-top: 3px solid hsl(var(--accent-secondary)); padding: 2rem;">
+        <h2 class="text-2xl font-bold mb-4">Webhook Integration</h2>
+        <p class="text-secondary mb-6 text-sm">Configure a webhook URL to receive real-time JSON payloads whenever a bulk scan finishes or a monitored competitor's stack changes.</p>
+        
+        <form id="webhookForm" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <!-- @ts-ignore -->
+            <input type="url" name="webhookUrl" placeholder="https://your-server.com/api/webhooks/siteintelica" value={webhookUrl} class="search-input" id="webhookInput" style="flex-grow: 1; padding: 0.75rem 1rem; font-family: monospace; background: rgba(0,0,0,0.2) !important; color: #fff;" required />
+            <button type="submit" class="btn-primary" id="saveWebhookBtn" style="position: static; height: auto;">Save</button>
+        </form>
+        <p id="webhookStatus" class="text-sm text-secondary hidden"></p>
     </div>
 
     <!-- Bulk Scanner Block -->
@@ -103,6 +123,44 @@ if (!user) {
               
               bulkBtn.disabled = false;
               bulkBtn.innerText = 'Run Bulk Analysis';
+          });
+      }
+
+      // Webhook Form Logic
+      const webhookForm = document.getElementById('webhookForm') as HTMLFormElement;
+      const saveWebhookBtn = document.getElementById('saveWebhookBtn') as HTMLButtonElement;
+      const webhookStatus = document.getElementById('webhookStatus');
+
+      if (webhookForm && saveWebhookBtn && webhookStatus) {
+          webhookForm.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              saveWebhookBtn.disabled = true;
+              saveWebhookBtn.innerText = 'Saving...';
+              
+              const formData = new FormData(webhookForm);
+              try {
+                  const res = await fetch('/api/user/webhook', {
+                      method: 'POST',
+                      body: JSON.stringify({ webhookUrl: formData.get('webhookUrl') }),
+                      headers: { 'Content-Type': 'application/json' }
+                  });
+                  
+                  if (res.ok) {
+                      webhookStatus.innerText = 'Webhook URL saved successfully!';
+                      webhookStatus.style.color = '#00e676';
+                  } else {
+                      const err = await res.json();
+                      webhookStatus.innerText = 'Error: ' + err.error;
+                      webhookStatus.style.color = '#ff4b4b';
+                  }
+              } catch(e) {
+                  webhookStatus.innerText = 'Network error occurred.';
+                  webhookStatus.style.color = '#ff4b4b';
+              }
+              
+              webhookStatus.classList.remove('hidden');
+              saveWebhookBtn.disabled = false;
+              saveWebhookBtn.innerText = 'Save';
           });
       }
   </script>

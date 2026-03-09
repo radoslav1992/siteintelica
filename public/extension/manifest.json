@@ -1,0 +1,13 @@
+{
+    "manifest_version": 3,
+    "name": "SiteIntelica - Tech Stack Scanner",
+    "version": "1.0",
+    "description": "Reveal the tech stack, monetization, and competitor intel of any website with a single click.",
+    "permissions": [
+        "activeTab"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Scan this site with SiteIntelica"
+    }
+}

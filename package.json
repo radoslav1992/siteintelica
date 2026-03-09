@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
+    "dev:all": "concurrently \"npm run dev\" \"cd engine && cargo run\"",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"

@@ -19,7 +19,8 @@ db.exec(`
     id TEXT NOT NULL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     hashed_password TEXT NOT NULL,
-    api_key TEXT UNIQUE
+    api_key TEXT UNIQUE,
+    webhook_url TEXT
   );
 
   CREATE TABLE IF NOT EXISTS session (
@@ -30,31 +31,98 @@ db.exec(`
   );
 `);
 
+// Try to patch existing databases with the new webhook_url column if it doesn't exist
+try {
+  db.exec('ALTER TABLE user ADD COLUMN webhook_url TEXT');
+} catch (e) {
+  // Ignore, likely already exists
+}
+
 export function saveScan(domain: string, data: any) {
-    try {
-        const stmt = db.prepare('INSERT INTO scans (domain, scan_data) VALUES (?, ?)');
-        stmt.run(domain, JSON.stringify(data));
-    } catch (error) {
-        console.error('Failed to save scan to DB:', error);
-    }
+  try {
+    const stmt = db.prepare('INSERT INTO scans (domain, scan_data) VALUES (?, ?)');
+    stmt.run(domain, JSON.stringify(data));
+  } catch (error) {
+    console.error('Failed to save scan to DB:', error);
+  }
 }
 
 export function getLastScan(domain: string) {
-    try {
-        const stmt = db.prepare('SELECT scan_data, scanned_at FROM scans WHERE domain = ? ORDER BY scanned_at DESC LIMIT 1');
-        const result = stmt.get(domain) as { scan_data: string, scanned_at: string } | undefined;
+  try {
+    const stmt = db.prepare('SELECT scan_data, scanned_at FROM scans WHERE domain = ? ORDER BY scanned_at DESC LIMIT 1');
+    const result = stmt.get(domain) as { scan_data: string, scanned_at: string } | undefined;
 
-        if (result) {
-            return {
-                data: JSON.parse(result.scan_data),
-                scannedAt: result.scanned_at
-            };
-        }
-        return null;
-    } catch (error) {
-        console.error('Failed to retrieve scan from DB:', error);
-        return null;
+    if (result) {
+      return {
+        data: JSON.parse(result.scan_data),
+        scannedAt: result.scanned_at
+      };
     }
+    return null;
+  } catch (error) {
+    console.error('Failed to retrieve scan from DB:', error);
+    return null;
+  }
+}
+
+export function getRecentScans(limit: number = 10) {
+  try {
+    const stmt = db.prepare('SELECT domain, scanned_at FROM scans ORDER BY scanned_at DESC LIMIT ?');
+    return stmt.all(limit) as { domain: string, scanned_at: string }[];
+  } catch (error) {
+    console.error('Failed to retrieve recent scans:', error);
+    return [];
+  }
+}
+
+export function getTrendsData() {
+  try {
+    // Fetch up to the last 1000 scans to aggregate trends
+    const stmt = db.prepare('SELECT scan_data FROM scans ORDER BY scanned_at DESC LIMIT 1000');
+    const rows = stmt.all() as { scan_data: string }[];
+
+    const techCounts: Record<string, number> = {};
+    const categoryCounts: Record<string, number> = {};
+    let totalScans = rows.length;
+
+    rows.forEach(row => {
+      try {
+        const data = JSON.parse(row.scan_data);
+        if (data.technologies) {
+          data.technologies.forEach((tech: any) => {
+            techCounts[tech.name] = (techCounts[tech.name] || 0) + 1;
+            if (tech.categories) {
+              tech.categories.forEach((cat: any) => {
+                categoryCounts[cat.name] = (categoryCounts[cat.name] || 0) + 1;
+              });
+            }
+          });
+        }
+      } catch (e) {
+        // Ignore parsing errors for individual rows
+      }
+    });
+
+    // Convert to sorted arrays
+    const topTechnologies = Object.entries(techCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50);
+
+    const topCategories = Object.entries(categoryCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+
+    return {
+      totalScans,
+      topTechnologies,
+      topCategories
+    };
+  } catch (error) {
+    console.error('Failed to aggregate trends data:', error);
+    return { totalScans: 0, topTechnologies: [], topCategories: [] };
+  }
 }
 
 export default db;

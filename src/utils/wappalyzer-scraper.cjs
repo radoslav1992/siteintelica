@@ -243,6 +243,33 @@ async function analyze(url) {
             });
         }
 
+        // --- Custom Ad Pixel & Tracking De-obfuscation ---
+        const trackers = [];
+
+        // Facebook Pixel
+        const fbpMatch = scripts.match(/fbq\('init',\s*['"](\d+)['"]/);
+        if (fbpMatch) trackers.push({ name: 'Facebook Pixel', id: fbpMatch[1] });
+
+        // TikTok Pixel
+        const ttqMatch = scripts.match(/ttq\.load\(['"]([a-zA-Z0-9]+)['"]\)/);
+        if (ttqMatch) trackers.push({ name: 'TikTok Pixel', id: ttqMatch[1] });
+
+        // Google Tag Manager
+        const gtmMatch = htmlText.match(/GTM-[A-Z0-9]+/);
+        if (gtmMatch) trackers.push({ name: 'Google Tag Manager', id: gtmMatch[0] });
+
+        // Google Analytics (Universal / GA4)
+        const gaMatch = htmlText.match(/G-[A-Z0-9]+|UA-\d+-\d+/);
+        if (gaMatch) trackers.push({ name: 'Google Analytics', id: gaMatch[0] });
+
+        // LinkedIn Insight Tag
+        const liMatch = scripts.match(/_linkedin_data_partner_ids\s*=\s*\[\s*['"](\d+)['"]\s*\]/);
+        if (liMatch) trackers.push({ name: 'LinkedIn Insight Tag', id: liMatch[1] });
+
+        // Twitter/X Pixel
+        const twqMatch = scripts.match(/twq\('config',\s*['"]([a-zA-Z0-9]+)['"]/);
+        if (twqMatch) trackers.push({ name: 'Twitter Pixel', id: twqMatch[1] });
+
         // --- Custom Keyword Density Analyzer ---
         const stopWords = new Set(['the', 'and', 'a', 'an', 'to', 'of', 'for', 'in', 'on', 'with', 'is', 'at', 'by', 'this', 'that', 'it', 'or', 'as', 'be', 'are', 'we', 'you', 'your', 'our', 'from', 'can', 'has', 'how']);
         const wordCounts = {};
@@ -293,7 +320,8 @@ async function analyze(url) {
             architecture: architecture,
             discovery: discovery,
             contacts: contacts,
-            keywords: keywords
+            keywords: keywords,
+            trackers: trackers
         }));
 
     } catch (error) {

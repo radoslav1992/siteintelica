@@ -258,6 +258,21 @@ const schemaData = {
         btnLoader.style.display = 'none';
       }
     });
+
+    // Auto-scan from Chrome Extension or URL Parameter
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const scanUrl = params.get('scan');
+      if (scanUrl) {
+         urlInput.value = scanUrl;
+         form.dispatchEvent(new Event('submit'));
+         
+         // Clean up URL so refresh doesn't trigger it again
+         const url = new URL(window.location.href);
+         url.searchParams.delete('scan');
+         window.history.replaceState({}, document.title, url.toString());
+      }
+    });
     
     function renderResults(data) {
       resultsSection.innerHTML = '';
@@ -312,6 +327,40 @@ const schemaData = {
         diffCard.appendChild(title);
         diffCard.appendChild(list);
         resultsSection.appendChild(diffCard);
+        delay += 0.1;
+      }
+
+      // 0.5 Visual Site Preview Card
+      if (data.screenshotUrl) {
+        const previewCard = document.createElement('div');
+        previewCard.className = 'glass-panel category-card animate-fade-in';
+        previewCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Visual Preview <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-secondary), 0.2); color:hsl(var(--accent-secondary))">LIVE</span>`;
+        
+        const imgContainer = document.createElement('div');
+        imgContainer.style.width = '100%';
+        imgContainer.style.height = '180px';
+        imgContainer.style.borderRadius = '0.5rem';
+        imgContainer.style.overflow = 'hidden';
+        imgContainer.style.border = '1px solid hsla(var(--text-primary), 0.1)';
+        imgContainer.style.position = 'relative';
+
+        const img = document.createElement('img');
+        img.src = data.screenshotUrl;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.objectPosition = 'top center';
+        img.alt = `Screenshot of ${currentScanUrl}`;
+        img.onerror = () => { imgContainer.style.display = 'none'; }; // Hide if microlink fails
+
+        imgContainer.appendChild(img);
+        previewCard.appendChild(title);
+        previewCard.appendChild(imgContainer);
+        resultsSection.appendChild(previewCard);
         delay += 0.1;
       }
 
@@ -655,6 +704,112 @@ const schemaData = {
         delay += 0.1;
       }
 
+      // 2.69 Marketing Trackers (Premium)
+      if (data.isPremium && data.trackers && data.trackers.length > 0) {
+        const trackerCard = document.createElement('div');
+        trackerCard.className = 'glass-panel category-card animate-fade-in';
+        trackerCard.style.animationDelay = `${delay}s`;
+        trackerCard.style.borderLeft = '3px solid hsl(var(--accent-secondary))';
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Ad Trackers & Pixels <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-secondary), 0.2); color:hsl(var(--acceny-secondary))">PREMIUM</span>`;
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        data.trackers.forEach(t => {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; border-bottom:1px solid hsla(var(--text-primary), 0.1); padding:4px 0;">
+                <span class="text-secondary">${t.name}:</span> 
+                <strong style="font-family:monospace; font-size:0.85rem; color:#ffa726">${t.id}</strong>
+            </div>`;
+        });
+        
+        trackerCard.appendChild(title);
+        trackerCard.appendChild(list);
+        resultsSection.appendChild(trackerCard);
+        delay += 0.1;
+      }
+
+      // 2.70 Network Subdomains (Premium)
+      if (data.isPremium && data.subdomains && data.subdomains.length > 0) {
+        const subCard = document.createElement('div');
+        subCard.className = 'glass-panel category-card animate-fade-in';
+        subCard.style.animationDelay = `${delay}s`;
+        subCard.style.borderLeft = '3px solid #ffa726';
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Discovered Subdomains <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(25, 100%, 50%, 0.2); color:#ffa726">PREMIUM</span>`;
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.gap = '0.5rem';
+        
+        data.subdomains.forEach(sub => {
+            const badge = document.createElement('div');
+            badge.className = 'badge';
+            badge.textContent = sub;
+            list.appendChild(badge);
+        });
+        
+        subCard.appendChild(title);
+        subCard.appendChild(list);
+        resultsSection.appendChild(subCard);
+        delay += 0.1;
+      }
+
+      // 2.71 Open Ports (Premium)
+      if (data.isPremium && data.openPorts && data.openPorts.length > 0) {
+        const portCard = document.createElement('div');
+        portCard.className = 'glass-panel category-card animate-fade-in';
+        portCard.style.animationDelay = `${delay}s`;
+        portCard.style.borderLeft = '3px solid #ff4b4b';
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Exposed Network Ports <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(350, 100%, 60%, 0.2); color:#ff4b4b">PREMIUM DANGER</span>`;
+        
+        const list = document.createElement('div');
+        list.className = 'tech-list';
+        list.style.flexDirection = 'column';
+        
+        data.openPorts.forEach(p => {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; width:100%; border-bottom:1px solid hsla(var(--text-primary), 0.1); padding:4px 0;">
+                <span class="text-secondary">Port ${p.port}</span> 
+                <strong style="color:white">${p.name}</strong>
+            </div>`;
+        });
+        
+        portCard.appendChild(title);
+        portCard.appendChild(list);
+        resultsSection.appendChild(portCard);
+        delay += 0.1;
+      }
+
+      // 2.72 Premium Teaser
+      if (!data.isPremium) {
+         const upCard = document.createElement('div');
+         upCard.className = 'glass-panel category-card animate-fade-in';
+         upCard.style.animationDelay = `${delay}s`;
+         upCard.style.background = 'linear-gradient(145deg, hsla(var(--accent-primary), 0.1), hsla(var(--accent-secondary), 0.1))';
+         upCard.style.border = '1px dashed hsl(var(--accent-primary))';
+         
+         const title = document.createElement('h3');
+         title.className = 'category-title';
+         title.innerHTML = `Unlock Deep Scans ✨`;
+         title.style.borderBottom = 'none';
+         title.style.marginBottom = '0';
+         
+         upCard.innerHTML = `<p style="font-size:0.85rem; color:hsl(var(--text-secondary)); margin-top:0;">Create a free account to unlock competitor ad pixel scraping, subdomain enumeration, and open port vulnerability scanning.</p>
+         <a href="/register" class="btn-primary" style="text-align:center; padding:0.4rem; font-size:0.8rem;">Create Free Account</a>`;
+         
+         upCard.insertBefore(title, upCard.firstChild);
+         resultsSection.appendChild(upCard);
+         delay += 0.1;
+      }
+
       // 2.7 SSL Certificate Card
       if (data.ssl) {
         const sslCard = document.createElement('div');
@@ -780,6 +935,47 @@ const schemaData = {
         delay += 0.1; // Stagger entrance animations
       });
       
+      // 5. Similar Sites (Competitor Discovery) Card - always rendered last
+      if (data.similarSites && data.similarSites.length > 0) {
+        const similarCard = document.createElement('div');
+        similarCard.className = 'glass-panel category-card animate-fade-in';
+        similarCard.style.animationDelay = `${delay}s`;
+        similarCard.style.gridColumn = '1 / -1'; // Span full width at the bottom
+        similarCard.style.marginTop = '1rem';
+        similarCard.style.borderTop = '3px solid hsl(var(--accent-primary))';
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Recently Scanned Sites <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary))">DISCOVERY</span>`;
+        
+        const listContainer = document.createElement('div');
+        listContainer.style.display = 'flex';
+        listContainer.style.gap = '1rem';
+        listContainer.style.flexWrap = 'wrap';
+        
+        data.similarSites.forEach(site => {
+            const btn = document.createElement('button');
+            btn.className = 'badge';
+            btn.style.cursor = 'pointer';
+            btn.style.padding = '0.5rem 1rem';
+            btn.style.fontSize = '0.9rem';
+            btn.innerHTML = `<img src="https://logo.clearbit.com/${site}" width="16" height="16" onerror="this.style.display='none'" style="margin-right:8px; border-radius:50%; vertical-align:middle;"/> ${site}`;
+            
+            // Allow clicking a similar site to instantly scan it
+            btn.onclick = () => {
+                urlInput.value = `https://${site}`;
+                form.dispatchEvent(new Event('submit'));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            
+            listContainer.appendChild(btn);
+        });
+
+        similarCard.appendChild(title);
+        similarCard.appendChild(listContainer);
+        resultsSection.appendChild(similarCard);
+      }
+
       resultsSection.classList.remove('hidden');
     }
 

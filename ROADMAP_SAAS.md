@@ -53,3 +53,20 @@ The goal is to provide enough value in the **Free Tier** to generate massive SEO
 6. **Webhooks Setup**
    - **What:** Allow users to define a Webhook URL in their dashboard. When a Bulk Scan finishes, or a Watched Competitor changes their stack, we automatically `POST` the JSON payload to their server.
    - **Why:** Essential for B2B API integrations.
+
+---
+
+## 🤖 Premium Tier AI Features (High-Value SaaS Extensions)
+*These features leverage Large Language Models (LLMs) to synthesize raw technical data into actionable business insights.*
+
+1. **AI-Powered "Executive Summary" & SWOT Analysis**
+   - **What:** Send the scraped tech stack, keywords, and meta-data to an LLM (OpenAI/Gemini) to generate a human-readable summary of the business's positioning and potential weaknesses.
+   - **Why:** Non-technical sales users want to know *"What does this company do and how do I sell to them?"* without reading JSON payloads.
+
+2. **Automated Cold Outreach Email Generator**
+   - **What:** Combine the target domain, discovered technologies, and extracted contact emails to generate highly personalized, tech-aware B2B sales emails. (e.g., *"I noticed you're using React but no caching layer..."*)
+   - **Why:** Directly ties SiteIntelica to the user's revenue generation. Agencies will pay a premium for hyper-personalized lead generation.
+
+3. **Tech Stack AI Upgrade Recommendations**
+   - **What:** Use AI to cross-reference the discovered stack against modern best practices. If a site is using outdated jQuery or vulnerable CMS versions, the AI suggests specific migrations.
+   - **Why:** Highly useful for web development agencies looking to pitch redesigns or security upgrades to prospects.

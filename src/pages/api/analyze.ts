@@ -2,7 +2,8 @@ import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
-import db, { saveScan, getLastScan } from '../../db/client';
+import db, { saveScan, getLastScan, getRecentScans } from '../../db/client';
+import { enumerateSubdomains } from '../../utils/subdomain-enum';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -11,17 +12,24 @@ export const POST: APIRoute = async (context) => {
   const request = context.request;
 
   // 0. API Key Authentication (SaaS Programmatic Access)
+  let isPremium = false;
   const authHeader = request.headers.get("Authorization");
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const apiKey = authHeader.substring(7);
     const stmt = db.prepare("SELECT id FROM user WHERE api_key = ?");
-    const user = stmt.get(apiKey);
-    if (!user) {
+    const dbUser = stmt.get(apiKey);
+    if (!dbUser) {
       return new Response(JSON.stringify({ error: "Invalid or inactive API Key." }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    isPremium = true;
+  }
+
+  // Also premium if logged in via browser
+  if (context.locals.user) {
+    isPremium = true;
   }
 
   try {
@@ -198,15 +206,51 @@ export const POST: APIRoute = async (context) => {
       }
     }
 
+    // 4.7 Similar Sites (Competitor Discovery) & Visual Preview
+    const recent = getRecentScans(10);
+    const similarSites = [...new Set(recent.map(r => r.domain))]
+      .filter(d => d !== domain) // exclude current
+      .slice(0, 3); // top 3 unique
+
+    const screenshotUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`;
+
+    // 4.8 Premium Features (Pro Only)
+    let subdomains: string[] = [];
+    let openPorts: any[] = [];
+
+    if (isPremium) {
+      try {
+        subdomains = await enumerateSubdomains(domain);
+
+        // Pass off the port scanning to our high-performance Rust Engine
+        const engineRes = await fetch('http://localhost:8080/scan/ports', {
+          method: 'POST',
+          body: JSON.stringify({ host: domain }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (engineRes.ok) {
+          openPorts = await engineRes.json();
+        }
+      } catch (e) {
+        console.error("Premium features error:", e);
+      }
+    }
+
     // 5. Compile final data payload
     const enhancedData = {
       ...parsedData,
+      screenshotUrl,
+      similarSites,
       network: dnsInfo,
       performance: performance,
       ssl: sslInfo,
       whois: whoisInfo,
       historicalTimestamp: previousScan ? previousScan.scannedAt : null,
-      historicalDiff: historicalDiff
+      historicalDiff: historicalDiff,
+      subdomains: isPremium ? subdomains : null,
+      openPorts: isPremium ? openPorts : null,
+      isPremium
     };
 
     // 5. Persist to History Database
