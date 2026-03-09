@@ -322,7 +322,7 @@ const schemaData = {
       border-color: rgba(255, 255, 255, 0.1);
     }
 
-    .report-section summary {
+    .report-section > summary {
       display: flex;
       align-items: center;
       gap: 0.75rem;
@@ -336,42 +336,57 @@ const schemaData = {
       transition: background 0.2s ease;
     }
 
-    .report-section summary:hover {
+    .report-section > summary::marker,
+    .report-section > summary::-webkit-details-marker {
+      display: none;
+      content: '';
+    }
+
+    .report-section > summary:hover {
       background: rgba(255, 255, 255, 0.025);
     }
 
-    .report-section summary::-webkit-details-marker { display: none; }
-
-    .report-section summary .section-chevron {
+    .report-section > summary .section-chevron {
       margin-left: auto;
-      width: 20px;
-      height: 20px;
-      display: flex;
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      min-height: 22px;
+      max-width: 22px;
+      max-height: 22px;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.06);
       transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
       flex-shrink: 0;
+      overflow: hidden;
     }
 
-    .report-section summary .section-chevron svg {
+    .report-section > summary .section-chevron svg {
       width: 12px;
       height: 12px;
+      min-width: 12px;
+      min-height: 12px;
+      max-width: 12px;
+      max-height: 12px;
       stroke: hsl(var(--text-muted));
+      fill: none;
       transition: stroke 0.2s;
+      display: block;
     }
 
-    .report-section[open] summary .section-chevron {
+    .report-section[open] > summary .section-chevron {
       transform: rotate(90deg);
       background: hsla(var(--accent-primary), 0.12);
     }
 
-    .report-section[open] summary .section-chevron svg {
+    .report-section[open] > summary .section-chevron svg {
       stroke: hsl(var(--accent-primary));
     }
 
-    .report-section[open] summary {
+    .report-section[open] > summary {
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
@@ -548,7 +563,7 @@ const schemaData = {
 
       let delay = 0;
 
-      const CHEVRON_SVG = `<span class="section-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>`;
+      const CHEVRON_SVG = `<span class="section-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>`;
 
       function createSection(icon, title, defaultOpen = false, badgeText = '') {
         const details = document.createElement('details');
