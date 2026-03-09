@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import db, { saveScan, getLastScan, getRecentScans } from '../../db/client';
 import { enumerateSubdomains } from '../../utils/subdomain-enum';
 import { calculateSecurityGrade } from '../../utils/security-grade';
+import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks } from '../../utils/seo-tools';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -218,36 +219,74 @@ export const POST: APIRoute = async (context) => {
     // 4.8 Premium Features (Pro Only)
     let subdomains: string[] = [];
     let openPorts: any[] = [];
+    let robotsTxt: any = null;
+    let sitemapData: any = null;
+    let redirectChain: any = null;
+    let seoAudit: any = null;
+    let readability: any = null;
+    let outboundLinks: any = null;
+    let brokenLinks: any = null;
 
     if (isPremium) {
       try {
-        // Run subdomain enumeration and Rust port scanner concurrently
-        // with a hard 10-second timeout to prevent blocking the entire scan
         const premiumTimeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Premium features timed out')), 10000)
+          setTimeout(() => reject(new Error('Premium features timed out')), 15000)
         );
 
         const premiumWork = async () => {
-          const [subs, engineRes] = await Promise.allSettled([
+          // Phase 1: Core scans + fast SEO tools (parallel)
+          const [subs, engineRes, robots, redirects] = await Promise.allSettled([
             enumerateSubdomains(domain),
             fetch('http://127.0.0.1:8080/scan/ports', {
               method: 'POST',
               body: JSON.stringify({ host: domain }),
               headers: { 'Content-Type': 'application/json' },
-              signal: AbortSignal.timeout(8000) // 8s fetch timeout
-            })
+              signal: AbortSignal.timeout(8000)
+            }),
+            fetchRobotsTxt(domain),
+            followRedirects(url)
           ]);
 
           if (subs.status === 'fulfilled') subdomains = subs.value;
           if (engineRes.status === 'fulfilled' && engineRes.value.ok) {
             openPorts = await engineRes.value.json();
           }
+          if (robots.status === 'fulfilled') {
+            robotsTxt = robots.value;
+            // Fetch sitemap if found in robots.txt
+            if (robotsTxt.sitemaps?.length > 0) {
+              try { sitemapData = await fetchSitemap(domain, robotsTxt.sitemaps[0]); } catch { }
+            } else {
+              try { sitemapData = await fetchSitemap(domain); } catch { }
+            }
+          }
+          if (redirects.status === 'fulfilled') redirectChain = redirects.value;
+
+          // Phase 2: HTML-based analysis (needs page content)
+          try {
+            const pageRes = await fetch(url, {
+              signal: AbortSignal.timeout(5000),
+              headers: { 'User-Agent': 'SiteIntelica Bot/1.0' }
+            });
+            if (pageRes.ok) {
+              const html = await pageRes.text();
+              seoAudit = auditSEO(html);
+              readability = analyzeReadability(html);
+              outboundLinks = extractOutboundLinks(html, domain);
+
+              // Phase 3: Broken link check (slower, batched)
+              try {
+                brokenLinks = await checkBrokenLinks(html, url);
+              } catch { }
+            }
+          } catch (e) {
+            console.error('HTML fetch for SEO audit failed (non-fatal):', e);
+          }
         };
 
         await Promise.race([premiumWork(), premiumTimeout]);
       } catch (e) {
         console.error("Premium features error (non-fatal):", e);
-        // Scan still succeeds with Free tier data
       }
     }
 
@@ -265,6 +304,13 @@ export const POST: APIRoute = async (context) => {
       historicalDiff: historicalDiff,
       subdomains: isPremium ? subdomains : null,
       openPorts: isPremium ? openPorts : null,
+      robotsTxt: isPremium ? robotsTxt : null,
+      sitemapData: isPremium ? sitemapData : null,
+      redirectChain: isPremium ? redirectChain : null,
+      seoAudit: isPremium ? seoAudit : null,
+      readability: isPremium ? readability : null,
+      outboundLinks: isPremium ? outboundLinks : null,
+      brokenLinks: isPremium ? brokenLinks : null,
       securityGrade,
       isPremium
     };

@@ -906,6 +906,201 @@ const schemaData = {
         delay += 0.1;
       }
 
+      // ── AHREFS-STYLE SEO CARDS (Premium) ──
+
+      // robots.txt & Sitemap Card
+      if (data.isPremium && data.robotsTxt) {
+        const robotsCard = document.createElement('div');
+        robotsCard.className = 'glass-panel category-card animate-fade-in';
+        robotsCard.style.animationDelay = `${delay}s`;
+        robotsCard.style.borderLeft = '3px solid #FFD700';
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `robots.txt & Sitemap <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        let content = '';
+        if (data.robotsTxt.found) {
+          content += `<div style="font-size:0.8rem; color:#00e676; margin-bottom:0.5rem;">✅ robots.txt found (${data.robotsTxt.rules.length} rules)</div>`;
+          if (data.robotsTxt.sitemaps.length > 0) {
+            content += `<div style="font-size:0.8rem; margin-bottom:0.5rem;">Sitemaps declared: <strong>${data.robotsTxt.sitemaps.length}</strong></div>`;
+          }
+          content += `<details style="margin-top:0.5rem;"><summary style="cursor:pointer; font-size:0.8rem; color:hsl(var(--accent-primary));">View raw robots.txt</summary><pre style="font-size:0.7rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:6px; margin-top:0.5rem; overflow-x:auto; max-height:200px; white-space:pre-wrap;">${data.robotsTxt.raw}</pre></details>`;
+        } else {
+          content += `<div style="font-size:0.8rem; color:#ff4b4b;">⚠️ No robots.txt found — search engines may crawl unintended pages.</div>`;
+        }
+        if (data.sitemapData) {
+          if (data.sitemapData.found) {
+            content += `<div style="font-size:0.8rem; margin-top:0.5rem; color:#00e676;">✅ Sitemap found: <strong>${data.sitemapData.urlCount}</strong> URLs indexed</div>`;
+          } else {
+            content += `<div style="font-size:0.8rem; margin-top:0.5rem; color:#ffa726;">⚠️ No sitemap.xml found — harms SEO crawlability.</div>`;
+          }
+        }
+        const div = document.createElement('div');
+        div.innerHTML = content;
+        robotsCard.appendChild(title);
+        robotsCard.appendChild(div);
+        resultsSection.appendChild(robotsCard);
+        delay += 0.1;
+      }
+
+      // Redirect Chain Card
+      if (data.isPremium && data.redirectChain && data.redirectChain.length > 1) {
+        const rcCard = document.createElement('div');
+        rcCard.className = 'glass-panel category-card animate-fade-in';
+        rcCard.style.animationDelay = `${delay}s`;
+        rcCard.style.borderLeft = '3px solid #FFD700';
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Redirect Chain <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        let content = `<div style="font-size:0.8rem; color:${data.redirectChain.length > 3 ? '#ff4b4b' : '#ffa726'}; margin-bottom:0.5rem;">${data.redirectChain.length} hops detected${data.redirectChain.length > 3 ? ' — excessive redirects hurt page speed!' : ''}</div>`;
+        data.redirectChain.forEach((hop, i) => {
+          const color = hop.status >= 300 && hop.status < 400 ? '#ffa726' : (hop.status === 200 ? '#00e676' : '#ff4b4b');
+          content += `<div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; padding:3px 0; border-bottom:1px solid hsla(var(--text-primary), 0.05);">
+            <span style="color:${color}; font-weight:700; min-width:32px;">${hop.status}</span>
+            <span style="color:hsl(var(--text-secondary)); word-break:break-all;">${hop.url}</span>
+            ${i < data.redirectChain.length - 1 ? '<span style="color:hsl(var(--text-secondary));">→</span>' : ''}
+          </div>`;
+        });
+        const div = document.createElement('div');
+        div.innerHTML = content;
+        rcCard.appendChild(title);
+        rcCard.appendChild(div);
+        resultsSection.appendChild(rcCard);
+        delay += 0.1;
+      }
+
+      // On-Page SEO Audit Card
+      if (data.isPremium && data.seoAudit) {
+        const auditCard = document.createElement('div');
+        auditCard.className = 'glass-panel category-card animate-fade-in';
+        auditCard.style.animationDelay = `${delay}s`;
+        auditCard.style.borderLeft = '3px solid #FFD700';
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `On-Page SEO Audit <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        const a = data.seoAudit;
+        let issues = 0;
+        let checks = '';
+        // H1 check
+        const h1ok = a.h1Count === 1;
+        if (!h1ok) issues++;
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${h1ok ? '✅' : '⚠️'} H1 Tags: <strong>${a.h1Count}</strong> ${h1ok ? '(Perfect)' : a.h1Count === 0 ? '(Missing! Add exactly 1)' : '(Too many! Use only 1)'}</div>`;
+        // Heading hierarchy
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">📑 Headings: ${a.headings.slice(0, 8).map(h => `<span class="badge" style="font-size:0.65rem;">${h.tag}</span>`).join(' ')}</div>`;
+        // Images alt
+        const altOk = a.imagesMissingAlt === 0;
+        if (!altOk) issues++;
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${altOk ? '✅' : '⚠️'} Images: <strong>${a.imagesTotal}</strong> total, <strong style="color:${altOk ? '#00e676' : '#ff4b4b'}">${a.imagesMissingAlt}</strong> missing alt text</div>`;
+        // OG Tags
+        const ogCount = Object.keys(a.ogTags).length;
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${ogCount > 0 ? '✅' : '⚠️'} Open Graph: <strong>${ogCount}</strong> tags ${ogCount === 0 ? '(Add og:title, og:image for social sharing)' : ''}</div>`;
+        // Twitter
+        const twCount = Object.keys(a.twitterTags).length;
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${twCount > 0 ? '✅' : '⚠️'} Twitter Cards: <strong>${twCount}</strong> tags</div>`;
+        // Canonical
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${a.canonical ? '✅' : '⚠️'} Canonical URL: ${a.canonical ? '<strong>Set</strong>' : '<strong style="color:#ff4b4b">Missing</strong>'}</div>`;
+        // Viewport
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${a.viewport ? '✅' : '⚠️'} Viewport Meta: ${a.viewport ? '<strong>Present</strong>' : '<strong style="color:#ff4b4b">Missing (not mobile-friendly)</strong>'}</div>`;
+        // Lang
+        checks += `<div style="padding:3px 0; font-size:0.8rem;">${a.lang ? '✅' : '⚠️'} HTML Lang: ${a.lang ? `<strong>${a.lang}</strong>` : '<strong style="color:#ff4b4b">Missing</strong>'}</div>`;
+        
+        const div = document.createElement('div');
+        div.innerHTML = checks;
+        auditCard.appendChild(title);
+        auditCard.appendChild(div);
+        resultsSection.appendChild(auditCard);
+        delay += 0.1;
+      }
+
+      // Content Readability Card
+      if (data.isPremium && data.readability) {
+        const readCard = document.createElement('div');
+        readCard.className = 'glass-panel category-card animate-fade-in';
+        readCard.style.animationDelay = `${delay}s`;
+        readCard.style.borderLeft = '3px solid #FFD700';
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Content Readability <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        const r = data.readability;
+        const scoreColor = r.fleschScore >= 60 ? '#00e676' : r.fleschScore >= 40 ? '#ffa726' : '#ff4b4b';
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem;">
+            <div style="width:52px; height:52px; border-radius:10px; background:${scoreColor}22; border:2px solid ${scoreColor}; display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:800; color:${scoreColor};">${r.fleschScore}</div>
+            <div>
+              <div style="font-size:0.85rem; font-weight:600;">${r.gradeLevel}</div>
+              <div style="font-size:0.75rem; color:hsl(var(--text-secondary));">Flesch Reading Ease</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.5rem; text-align:center;">
+            <div class="badge"><strong>${r.wordCount.toLocaleString()}</strong><br/><span style="font-size:0.65rem; opacity:0.7;">words</span></div>
+            <div class="badge"><strong>${r.sentenceCount}</strong><br/><span style="font-size:0.65rem; opacity:0.7;">sentences</span></div>
+            <div class="badge"><strong>${r.avgWordsPerSentence}</strong><br/><span style="font-size:0.65rem; opacity:0.7;">words/sentence</span></div>
+          </div>
+        `;
+        readCard.appendChild(title);
+        readCard.appendChild(div);
+        resultsSection.appendChild(readCard);
+        delay += 0.1;
+      }
+
+      // Outbound Links Card
+      if (data.isPremium && data.outboundLinks && data.outboundLinks.length > 0) {
+        const outCard = document.createElement('div');
+        outCard.className = 'glass-panel category-card animate-fade-in';
+        outCard.style.animationDelay = `${delay}s`;
+        outCard.style.borderLeft = '3px solid #FFD700';
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Outbound Links (${data.outboundLinks.length}) <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        const list = document.createElement('div');
+        list.style.display = 'flex';
+        list.style.flexDirection = 'column';
+        list.style.gap = '4px';
+        data.outboundLinks.slice(0, 15).forEach(link => {
+          list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid hsla(var(--text-primary), 0.05); font-size:0.78rem;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <img src="https://logo.clearbit.com/${link.domain}" width="14" height="14" style="border-radius:3px;" onerror="this.style.display='none'" />
+              <span style="color:hsl(var(--text-primary));">${link.domain}</span>
+            </div>
+            <span style="color:hsl(var(--text-secondary)); font-size:0.7rem; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${link.text}</span>
+          </div>`;
+        });
+        outCard.appendChild(title);
+        outCard.appendChild(list);
+        resultsSection.appendChild(outCard);
+        delay += 0.1;
+      }
+
+      // Broken Links Card
+      if (data.isPremium && data.brokenLinks) {
+        const broken = data.brokenLinks.filter(l => l.broken);
+        const healthy = data.brokenLinks.filter(l => !l.broken);
+        const blCard = document.createElement('div');
+        blCard.className = 'glass-panel category-card animate-fade-in';
+        blCard.style.animationDelay = `${delay}s`;
+        blCard.style.borderLeft = `3px solid ${broken.length > 0 ? '#ff4b4b' : '#00e676'}`;
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Link Health Check <span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        let content = '';
+        content += `<div style="display:flex; gap:1rem; margin-bottom:0.5rem;">
+          <div class="badge" style="background:rgba(0,230,118,0.15); color:#00e676;">✅ ${healthy.length} healthy</div>
+          <div class="badge" style="background:rgba(255,75,75,0.15); color:#ff4b4b;">❌ ${broken.length} broken</div>
+          <div class="badge">${data.brokenLinks.length} checked</div>
+        </div>`;
+        if (broken.length > 0) {
+          content += broken.slice(0, 8).map(l => `<div style="font-size:0.75rem; padding:3px 0; border-bottom:1px solid hsla(var(--text-primary), 0.05); color:#ff4b4b; word-break:break-all;">❌ ${l.status || 'Timeout'} — ${l.url.substring(0, 80)}</div>`).join('');
+        } else {
+          content += `<div style="font-size:0.8rem; color:#00e676;">All checked links are healthy! 🎉</div>`;
+        }
+        const div = document.createElement('div');
+        div.innerHTML = content;
+        blCard.appendChild(title);
+        blCard.appendChild(div);
+        resultsSection.appendChild(blCard);
+        delay += 0.1;
+      }
+
       // 2.72 Premium AI Tools Panel
       if (data.isPremium) {
         const aiCard = document.createElement('div');
