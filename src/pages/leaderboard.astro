@@ -1,0 +1,50 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getLeaderboard } from '../db/client';
+
+const leaderboard = getLeaderboard();
+---
+
+<Layout title="Leaderboard | SiteIntelica">
+  <div class="container pt-32 pb-24">
+    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 3rem; text-align: center;">
+      <h1 class="text-4xl font-extrabold text-gradient">🏆 Domain Leaderboard</h1>
+      <p class="text-secondary text-lg">The most analyzed websites on SiteIntelica.</p>
+    </div>
+
+    <div style="max-width: 800px; margin: 0 auto;">
+      {leaderboard.length === 0 ? (
+        <div class="glass-panel p-6 animate-fade-in" style="text-align: center;">
+          <p class="text-secondary">No scans in the database yet. Be the first to <a href="/" style="color:hsl(var(--accent-primary)); text-decoration:underline;">scan a website</a>!</p>
+        </div>
+      ) : (
+        leaderboard.map((entry, i) => (
+          <div class="glass-panel p-6 animate-fade-in" style={`margin-bottom: 0.75rem; animation-delay: ${i * 0.04}s; display:flex; justify-content:space-between; align-items:center;`}>
+            <div style="display:flex; align-items:center; gap:1rem;">
+              <div style={`width:36px; height:36px; border-radius:50%; background:${i < 3 ? 'linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))' : 'hsla(var(--text-primary), 0.1)'}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; color:${i < 3 ? '#fff' : 'hsl(var(--text-secondary))'};`}>
+                {i + 1}
+              </div>
+              <img src={`https://logo.clearbit.com/${entry.domain}`} alt="" width="28" height="28" style="border-radius:6px; background:rgba(255,255,255,0.1);" onerror="this.style.display='none'" />
+              <div>
+                <a href={`/report/${entry.domain}`} style="color:hsl(var(--text-primary)); font-weight:600; font-size:1rem; text-decoration:none;">
+                  {entry.domain}
+                </a>
+                <div style="font-size:0.7rem; color:hsl(var(--text-secondary));">
+                  Last scanned: {new Date(entry.last_scanned + ' Z').toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <span class="badge" style="background:hsla(var(--accent-primary), 0.15); color:hsl(var(--accent-primary)); font-weight:700;">
+                {entry.scan_count} scans
+              </span>
+              <button class="badge" style="cursor:pointer; border:none; background:hsla(var(--accent-secondary), 0.2); color:hsl(var(--accent-secondary));" onclick={`window.location.href='/?scan=https://${entry.domain}'`}>
+                Scan
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+</Layout>

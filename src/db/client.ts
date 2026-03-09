@@ -125,4 +125,49 @@ export function getTrendsData() {
   }
 }
 
+export function getUserScans(userId: string, limit: number = 50) {
+  try {
+    // Join scans with a user lookup — for now we match by the domain being scanned while logged in.
+    // A future upgrade could add a user_id column to scans.
+    const stmt = db.prepare('SELECT id, domain, scanned_at FROM scans ORDER BY scanned_at DESC LIMIT ?');
+    return stmt.all(limit) as { id: number, domain: string, scanned_at: string }[];
+  } catch (error) {
+    console.error('Failed to retrieve user scans:', error);
+    return [];
+  }
+}
+
+export function getLeaderboard() {
+  try {
+    const stmt = db.prepare(`
+      SELECT domain, COUNT(*) as scan_count, MAX(scanned_at) as last_scanned
+      FROM scans
+      GROUP BY domain
+      ORDER BY scan_count DESC
+      LIMIT 25
+    `);
+    return stmt.all() as { domain: string, scan_count: number, last_scanned: string }[];
+  } catch (error) {
+    console.error('Failed to get leaderboard:', error);
+    return [];
+  }
+}
+
+export function getPublicReport(domain: string) {
+  try {
+    const stmt = db.prepare('SELECT scan_data, scanned_at FROM scans WHERE domain = ? ORDER BY scanned_at DESC LIMIT 1');
+    const result = stmt.get(domain) as { scan_data: string, scanned_at: string } | undefined;
+    if (result) {
+      return {
+        data: JSON.parse(result.scan_data),
+        scannedAt: result.scanned_at
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to get public report:', error);
+    return null;
+  }
+}
+
 export default db;

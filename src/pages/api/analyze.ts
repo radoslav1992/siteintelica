@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { join } from 'node:path';
 import db, { saveScan, getLastScan, getRecentScans } from '../../db/client';
 import { enumerateSubdomains } from '../../utils/subdomain-enum';
+import { calculateSecurityGrade } from '../../utils/security-grade';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -251,6 +252,7 @@ export const POST: APIRoute = async (context) => {
     }
 
     // 5. Compile final data payload
+    const securityGrade = calculateSecurityGrade(parsedData?.security);
     const enhancedData = {
       ...parsedData,
       screenshotUrl,
@@ -263,6 +265,7 @@ export const POST: APIRoute = async (context) => {
       historicalDiff: historicalDiff,
       subdomains: isPremium ? subdomains : null,
       openPorts: isPremium ? openPorts : null,
+      securityGrade,
       isPremium
     };
 

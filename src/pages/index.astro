@@ -364,6 +364,43 @@ const schemaData = {
         delay += 0.1;
       }
 
+      // 0.6 Security Grade Card
+      if (data.securityGrade) {
+        const gradeColors = { 'A': '#00e676', 'B': '#66bb6a', 'C': '#ffa726', 'D': '#ff7043', 'F': '#ff4b4b' };
+        const gradeColor = gradeColors[data.securityGrade.grade] || '#ff4b4b';
+        
+        const gradeCard = document.createElement('div');
+        gradeCard.className = 'glass-panel category-card animate-fade-in';
+        gradeCard.style.animationDelay = `${delay}s`;
+        
+        const title = document.createElement('h3');
+        title.className = 'category-title';
+        title.innerHTML = `Security Grade <span class="badge" style="font-size:0.6rem; margin-left:8px; background:${gradeColor}22; color:${gradeColor}">AUDIT</span>`;
+        
+        const content = document.createElement('div');
+        content.innerHTML = `
+          <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1rem;">
+            <div style="width:64px; height:64px; border-radius:12px; background:${gradeColor}22; border:2px solid ${gradeColor}; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:800; color:${gradeColor};">${data.securityGrade.grade}</div>
+            <div style="flex:1;">
+              <div style="font-size:0.85rem; color:hsl(var(--text-secondary)); margin-bottom:4px;">Security Score: ${data.securityGrade.score}/100</div>
+              <div style="width:100%; height:8px; background:hsla(var(--text-primary), 0.1); border-radius:4px; overflow:hidden;">
+                <div style="width:${data.securityGrade.score}%; height:100%; background:${gradeColor}; border-radius:4px; transition:width 1s ease;"></div>
+              </div>
+            </div>
+          </div>
+          ${data.securityGrade.recommendations.length > 0 ? `
+            <div style="font-size:0.8rem; color:hsl(var(--text-secondary));">
+              ${data.securityGrade.recommendations.map(r => `<div style="padding:3px 0; border-bottom:1px solid hsla(var(--text-primary), 0.05);">⚠️ ${r}</div>`).join('')}
+            </div>
+          ` : '<div style="color:#00e676; font-size:0.85rem;">✅ All critical security headers are present.</div>'}
+        `;
+        
+        gradeCard.appendChild(title);
+        gradeCard.appendChild(content);
+        resultsSection.appendChild(gradeCard);
+        delay += 0.1;
+      }
+
       // 1. Social Links Card
       if (data.socials && data.socials.length > 0) {
         const socialCard = document.createElement('div');
@@ -788,7 +825,70 @@ const schemaData = {
         delay += 0.1;
       }
 
-      // 2.72 Premium Teaser
+      // 2.72 Premium AI Tools Panel
+      if (data.isPremium) {
+        const aiCard = document.createElement('div');
+        aiCard.className = 'glass-panel category-card animate-fade-in';
+        aiCard.style.animationDelay = `${delay}s`;
+        aiCard.style.background = 'linear-gradient(145deg, hsla(var(--accent-primary), 0.08), hsla(var(--accent-secondary), 0.08))';
+        aiCard.style.borderTop = '3px solid hsl(var(--accent-primary))';
+        
+        aiCard.innerHTML = `
+          <h3 class="category-title">🤖 AI Intelligence Suite <span class="badge" style="font-size:0.6rem; margin-left:8px; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary))">PREMIUM</span></h3>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-top:0.75rem;">
+            <button id="btnAiSummary" style="padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--text-primary), 0.15); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='hsl(var(--accent-primary))'" onmouseout="this.style.borderColor='hsla(var(--text-primary), 0.15)'">
+              📊 Executive Summary
+            </button>
+            <button id="btnAiEmail" style="padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--text-primary), 0.15); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='hsl(var(--accent-secondary))'" onmouseout="this.style.borderColor='hsla(var(--text-primary), 0.15)'">
+              ✉️ Generate Cold Email
+            </button>
+            <button id="btnAiUpgrade" style="padding:0.75rem; border-radius:8px; border:1px solid hsla(var(--text-primary), 0.15); background:rgba(0,0,0,0.2); color:hsl(var(--text-primary)); cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.borderColor='#ffa726'" onmouseout="this.style.borderColor='hsla(var(--text-primary), 0.15)'">
+              ⬆️ Upgrade Tips
+            </button>
+          </div>
+          <div id="aiOutput" style="margin-top:1rem; display:none; padding:1rem; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.82rem; line-height:1.6; white-space:pre-wrap; color:hsl(var(--text-primary)); max-height:400px; overflow-y:auto;"></div>
+        `;
+        
+        resultsSection.appendChild(aiCard);
+        delay += 0.1;
+
+        // Wire up AI buttons
+        const aiOutput = aiCard.querySelector('#aiOutput');
+        const scanDomain = new URL(currentScanUrl).hostname;
+
+        const callAi = async (endpoint, btn) => {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          aiOutput.style.display = 'block';
+          aiOutput.textContent = 'Generating AI response...';
+          try {
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              body: JSON.stringify({ domain: scanDomain }),
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await res.json();
+            if (res.ok) {
+              aiOutput.innerHTML = (result.summary || result.email || 
+                (result.recommendations ? result.recommendations.map(r => 
+                  `<div style="margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid hsla(var(--text-primary), 0.1);"><strong style="color:#ffa726;">⚠️ ${r.technology}</strong><br/><span style="color:hsl(var(--text-secondary));">${r.risk}</span><br/><span style="color:#00e676;">💡 ${r.suggestion}</span></div>`
+                ).join('') : 'Done.')).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
+            } else {
+              aiOutput.textContent = 'Error: ' + (result.error || 'Unknown error');
+            }
+          } catch(e) {
+            aiOutput.textContent = 'Network error generating AI response.';
+          }
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        };
+
+        aiCard.querySelector('#btnAiSummary').addEventListener('click', function() { callAi('/api/ai/summary', this); });
+        aiCard.querySelector('#btnAiEmail').addEventListener('click', function() { callAi('/api/ai/email', this); });
+        aiCard.querySelector('#btnAiUpgrade').addEventListener('click', function() { callAi('/api/ai/upgrades', this); });
+      }
+
+      // 2.73 Free Tier Teaser
       if (!data.isPremium) {
          const upCard = document.createElement('div');
          upCard.className = 'glass-panel category-card animate-fade-in';
@@ -802,7 +902,7 @@ const schemaData = {
          title.style.borderBottom = 'none';
          title.style.marginBottom = '0';
          
-         upCard.innerHTML = `<p style="font-size:0.85rem; color:hsl(var(--text-secondary)); margin-top:0;">Create a free account to unlock competitor ad pixel scraping, subdomain enumeration, and open port vulnerability scanning.</p>
+         upCard.innerHTML = `<p style="font-size:0.85rem; color:hsl(var(--text-secondary)); margin-top:0;">Create a free account to unlock AI summaries, competitor ad pixel scraping, subdomain enumeration, cold email generation, and open port vulnerability scanning.</p>
          <a href="/register" class="btn-primary" style="text-align:center; padding:0.4rem; font-size:0.8rem;">Create Free Account</a>`;
          
          upCard.insertBefore(title, upCard.firstChild);

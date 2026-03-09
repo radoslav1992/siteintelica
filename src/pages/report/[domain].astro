@@ -1,0 +1,94 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getPublicReport } from '../../db/client';
+import { calculateSecurityGrade } from '../../utils/security-grade';
+
+const { domain } = Astro.params;
+
+if (!domain) {
+  return Astro.redirect('/404');
+}
+
+const report = getPublicReport(domain);
+
+if (!report) {
+  return Astro.redirect('/404');
+}
+
+const data = report.data;
+const scannedAt = new Date(report.scannedAt + ' Z').toLocaleString();
+const securityGrade = calculateSecurityGrade(data?.security);
+
+const gradeColors: Record<string, string> = { 'A': '#00e676', 'B': '#66bb6a', 'C': '#ffa726', 'D': '#ff7043', 'F': '#ff4b4b' };
+const gradeColor = gradeColors[securityGrade.grade] || '#ff4b4b';
+---
+
+<Layout title={`${domain} Tech Stack Report | SiteIntelica`}>
+  <div class="container pt-32 pb-24">
+    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 3rem; text-align: center;">
+      <div style="display:flex; align-items:center; justify-content:center; gap:1rem; margin-bottom:0.5rem;">
+        <img src={`https://logo.clearbit.com/${domain}`} alt="" width="48" height="48" style="border-radius:12px; background:rgba(255,255,255,0.1);" onerror="this.style.display='none'" />
+        <h1 class="text-4xl font-extrabold text-gradient">{domain}</h1>
+      </div>
+      <p class="text-secondary text-sm">Last scanned: {scannedAt}</p>
+      <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:0.5rem;">
+        <button class="btn-primary" style="position:static; padding:0.5rem 1.5rem; font-size:0.85rem;" onclick={`window.location.href='/?scan=https://${domain}'`}>🔄 Re-Scan Now</button>
+      </div>
+    </div>
+
+    <div style="max-width: 900px; margin: 0 auto; display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+      <!-- Security Grade -->
+      <div class="glass-panel p-6 animate-fade-in">
+        <h3 class="category-title">Security Grade</h3>
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <div style={`width:56px; height:56px; border-radius:12px; background:${gradeColor}22; border:2px solid ${gradeColor}; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; color:${gradeColor};`}>
+            {securityGrade.grade}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.8rem; color:hsl(var(--text-secondary)); margin-bottom:4px;">Score: {securityGrade.score}/100</div>
+            <div style="width:100%; height:6px; background:hsla(var(--text-primary), 0.1); border-radius:4px; overflow:hidden;">
+              <div style={`width:${securityGrade.score}%; height:100%; background:${gradeColor}; border-radius:4px;`}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEO Snapshot -->
+      {data.seo && (
+        <div class="glass-panel p-6 animate-fade-in" style="animation-delay:0.05s;">
+          <h3 class="category-title">SEO</h3>
+          <div style="font-size:0.85rem; color:hsl(var(--text-primary)); font-weight:600; margin-bottom:4px;">{data.seo.title || 'No title tag'}</div>
+          <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); line-height:1.4;">{data.seo.description ? data.seo.description.substring(0, 120) + '...' : 'No meta description found.'}</div>
+        </div>
+      )}
+
+      <!-- Performance -->
+      {data.performance && (
+        <div class="glass-panel p-6 animate-fade-in" style="animation-delay:0.1s;">
+          <h3 class="category-title">Performance</h3>
+          <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+            {data.performance.performanceScore != null && <div class="badge" style={`color:${data.performance.performanceScore >= 80 ? '#00e676' : data.performance.performanceScore >= 50 ? '#ffa726' : '#ff4b4b'}`}>Perf: {data.performance.performanceScore}</div>}
+            {data.performance.seoScore != null && <div class="badge">SEO: {data.performance.seoScore}</div>}
+            {data.performance.accessibilityScore != null && <div class="badge">A11y: {data.performance.accessibilityScore}</div>}
+          </div>
+        </div>
+      )}
+
+      <!-- Technologies -->
+      {data.technologies && data.technologies.length > 0 && (
+        <div class="glass-panel p-6 animate-fade-in" style="animation-delay:0.15s; grid-column: 1 / -1;">
+          <h3 class="category-title">Detected Technologies ({data.technologies.length})</h3>
+          <div class="tech-list" style="gap:0.4rem;">
+            {data.technologies.map((tech: any) => (
+              <div class="badge" style="display:flex; align-items:center; gap:6px;">
+                <img src={`https://logo.clearbit.com/${tech.website?.replace('https://', '').replace('http://', '').split('/')[0]}`} width="16" height="16" style="border-radius:3px;" onerror="this.style.display='none'" alt="" />
+                {tech.name}
+                {tech.version && <span style="font-size:0.65rem; opacity:0.6;">v{tech.version}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>

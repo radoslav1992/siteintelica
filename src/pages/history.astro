@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getUserScans } from '../db/client';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect("/login");
+}
+
+const scans = getUserScans(user.id, 100);
+---
+
+<Layout title="Scan History | SiteIntelica">
+  <div class="container pt-32 pb-24">
+    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 3rem; text-align: center;">
+      <h1 class="text-4xl font-extrabold text-gradient">Scan History</h1>
+      <p class="text-secondary text-lg">Your complete timeline of intelligence reports.</p>
+    </div>
+
+    <div style="max-width: 800px; margin: 0 auto;">
+      {scans.length === 0 ? (
+        <div class="glass-panel p-6 animate-fade-in" style="text-align: center;">
+          <p class="text-secondary">No scans yet. Go to the <a href="/" style="color:hsl(var(--accent-primary)); text-decoration:underline;">homepage</a> and scan your first URL!</p>
+        </div>
+      ) : (
+        scans.map((scan, i) => (
+          <div class="glass-panel p-6 animate-fade-in" style={`margin-bottom: 1rem; animation-delay: ${i * 0.05}s; display:flex; justify-content:space-between; align-items:center;`}>
+            <div style="display:flex; align-items:center; gap:1rem;">
+              <img src={`https://logo.clearbit.com/${scan.domain}`} alt="" width="32" height="32" style="border-radius:6px; background:rgba(255,255,255,0.1);" onerror="this.style.display='none'" />
+              <div>
+                <a href={`/report/${scan.domain}`} style="color:hsl(var(--accent-primary)); font-weight:600; font-size:1rem; text-decoration:none;">
+                  {scan.domain}
+                </a>
+                <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:2px;">
+                  {new Date(scan.scanned_at + ' Z').toLocaleString()}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+              <a href={`/report/${scan.domain}`} class="badge" style="text-decoration:none; cursor:pointer;">View Report</a>
+              <button class="badge" style="cursor:pointer; background:hsla(var(--accent-primary), 0.2); color:hsl(var(--accent-primary)); border:none;" onclick={`window.location.href='/?scan=https://${scan.domain}'`}>Re-scan</button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+</Layout>
