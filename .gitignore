@@ -24,3 +24,6 @@ pnpm-debug.log*
 .idea/
 siteintelica_scans.db
 *.db
+
+# Tranco data cache
+data/

@@ -918,13 +918,15 @@ const schemaData = {
           card.className = 'glass-panel category-card animate-fade-in';
           card.style.animationDelay = `${delay}s`;
           card.style.borderLeft = '3px solid #FFD700';
+          const hasTranco = data.trancoRank != null;
           card.innerHTML = `
             <h3 class="category-title">📈 Est. Monthly Visitors ${premBadge}</h3>
+            ${hasTranco ? `<div style="margin-bottom:0.5rem;"><span class="badge" style="background:rgba(0,230,118,0.15); color:#00e676; font-size:0.7rem;">🌐 Tranco Rank #${data.trancoRank.toLocaleString()}</span> <span style="font-size:0.7rem; color:hsl(var(--text-secondary));">(top 1M domains)</span></div>` : ''}
             <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem;">
               <div style="font-size:1.8rem; font-weight:800; color:hsl(var(--accent-primary));">${tmv.low.toLocaleString()} — ${tmv.high.toLocaleString()}</div>
             </div>
             <div style="font-size:0.78rem; color:hsl(var(--text-secondary));">Confidence: <span class="badge">${tmv.confidence}</span></div>
-            <div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">Based on sitemap size, performance, SEO score, and tech stack complexity.</div>
+            <div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">${hasTranco ? 'Based on Tranco global domain ranking (power-law model).' : 'Based on tech stack complexity, sitemap size, and performance signals.'}</div>
           `;
           resultsSection.appendChild(card);
           delay += 0.1;

@@ -1,7 +1,8 @@
 /**
  * Business Intelligence Calculators v2
- * Much more realistic estimations using tech-stack-weighted heuristics.
+ * Uses Tranco ranking for traffic when available, falls back to tech-weighted heuristics.
  */
+import { rankToTraffic } from './tranco';
 
 // ── Known SaaS pricing (monthly, USD) ──
 const TECH_PRICING: Record<string, { min: number; max: number; label: string }> = {
@@ -102,7 +103,7 @@ export interface BusinessMetrics {
     adRevenueEstimate: { monthlyMin: number; monthlyMax: number; networks: string[] } | null;
 }
 
-export function calculateBusinessMetrics(data: any): BusinessMetrics {
+export function calculateBusinessMetrics(data: any, trancoRank: number | null = null): BusinessMetrics {
     const techs: string[] = (data.technologies || []).map((t: any) => t.name);
     const perfScore = data.performance?.performanceScore ?? 50;
     const seoScore = data.performance?.seoScore ?? 50;
@@ -111,7 +112,10 @@ export function calculateBusinessMetrics(data: any): BusinessMetrics {
     const readability = data.readability;
     const seoAudit = data.seoAudit;
 
-    const trafficEstimate = estimateTraffic(perfScore, seoScore, sitemapCount, techs, readability);
+    // Prefer Tranco-based traffic; fall back to tech heuristics
+    const trafficEstimate = trancoRank
+        ? rankToTraffic(trancoRank)
+        : estimateTraffic(perfScore, seoScore, sitemapCount, techs, readability);
 
     return {
         estimatedMonthlyVisitors: trafficEstimate,

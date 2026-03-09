@@ -7,6 +7,7 @@ import { enumerateSubdomains } from '../../utils/subdomain-enum';
 import { calculateSecurityGrade } from '../../utils/security-grade';
 import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks } from '../../utils/seo-tools';
 import { calculateBusinessMetrics } from '../../utils/business-intel';
+import { getTrancoRank, rankToTraffic } from '../../utils/tranco';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -314,6 +315,7 @@ export const POST: APIRoute = async (context) => {
       brokenLinks: isPremium ? brokenLinks : null,
       securityGrade,
       isPremium,
+      trancoRank: isPremium ? (await getTrancoRank(domain)) : null,
       businessMetrics: isPremium ? calculateBusinessMetrics({
         technologies: parsedData?.technologies,
         performance,
@@ -323,7 +325,7 @@ export const POST: APIRoute = async (context) => {
         readability,
         trackers: parsedData?.trackers,
         seo: parsedData?.seo
-      }) : null
+      }, await getTrancoRank(domain)) : null
     };
 
     // 5. Persist to History Database
