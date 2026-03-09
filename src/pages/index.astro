@@ -854,7 +854,11 @@ const schemaData = {
 
         // Wire up AI buttons
         const aiOutput = aiCard.querySelector('#aiOutput');
-        const scanDomain = new URL(currentScanUrl).hostname;
+        let scanDomain = '';
+        try {
+          const normalizedUrl = currentScanUrl.startsWith('http') ? currentScanUrl : 'https://' + currentScanUrl;
+          scanDomain = new URL(normalizedUrl).hostname;
+        } catch { scanDomain = currentScanUrl.replace(/^https?:\/\//, '').split('/')[0]; }
 
         const callAi = async (endpoint, btn) => {
           btn.disabled = true;
