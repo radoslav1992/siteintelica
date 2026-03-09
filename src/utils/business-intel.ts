@@ -95,7 +95,7 @@ const HOSTING_TIERS = [
 ];
 
 export interface BusinessMetrics {
-    estimatedMonthlyVisitors: { low: number; high: number; confidence: string };
+    estimatedMonthlyVisitors: { low: number; high: number; confidence: string; sources: string[] };
     techStackCost: { totalMin: number; totalMax: number; breakdown: { name: string; min: number; max: number; label: string }[] };
     carbonFootprint: { grams: number; trees: number; rating: string };
     domainAuthority: { score: number; factors: { name: string; score: number; max: number }[] };
@@ -111,23 +111,112 @@ export function calculateBusinessMetrics(data: any, trancoRank: number | null = 
     const sitemapCount = data.sitemapData?.urlCount ?? 0;
     const readability = data.readability;
     const seoAudit = data.seoAudit;
+    const cruxData = data.cruxData;
+    const backlinkData = data.backlinkData;
+    const ipIntel = data.ipIntel;
 
-    // Prefer Tranco-based traffic; fall back to tech heuristics
-    const trafficEstimate = trancoRank
-        ? rankToTraffic(trancoRank)
-        : estimateTraffic(perfScore, seoScore, sitemapCount, techs, readability);
+    const trafficEstimate = estimateTrafficEnhanced(
+        perfScore, seoScore, sitemapCount, techs, readability,
+        trancoRank, cruxData, backlinkData
+    );
+
+    const hostingCost = estimateHostingCostEnhanced(techs, trafficEstimate, ipIntel);
 
     return {
         estimatedMonthlyVisitors: trafficEstimate,
         techStackCost: calculateTechCost(techs),
         carbonFootprint: estimateCarbon(perfScore, trafficEstimate),
-        domainAuthority: calculateDomainAuthority(perfScore, seoScore, secGrade, seoAudit, sitemapCount, techs),
-        hostingCost: estimateHostingCost(techs, trafficEstimate),
+        domainAuthority: calculateDomainAuthorityEnhanced(
+            perfScore, seoScore, secGrade, seoAudit, sitemapCount, techs, backlinkData
+        ),
+        hostingCost,
         adRevenueEstimate: estimateAdRevenue(techs, data.trackers, trafficEstimate)
     };
 }
 
-function estimateTraffic(perfScore: number, seoScore: number, sitemapUrls: number, techs: string[], readability: any): BusinessMetrics['estimatedMonthlyVisitors'] {
+function estimateTrafficEnhanced(
+    perfScore: number, seoScore: number, sitemapUrls: number,
+    techs: string[], readability: any,
+    trancoRank: number | null, cruxData: any, backlinkData: any
+): BusinessMetrics['estimatedMonthlyVisitors'] {
+    const sources: string[] = [];
+
+    // Tier 1: Tranco rank (highest confidence)
+    if (trancoRank) {
+        const tranco = rankToTraffic(trancoRank);
+        sources.push(`Tranco Rank #${trancoRank.toLocaleString()}`);
+
+        // Refine with CrUX if available
+        if (cruxData?.found) {
+            sources.push('CrUX real-user data');
+            if (tranco.confidence === 'Low' || tranco.confidence === 'Low-Medium') {
+                tranco.confidence = 'Medium';
+            }
+        }
+
+        // Refine with backlink count
+        if (backlinkData?.referringDomains > 0) {
+            sources.push(`${backlinkData.referringDomains} referring domains`);
+            if (backlinkData.referringDomains > 100) {
+                tranco.low = Math.round(tranco.low * 1.2);
+                tranco.high = Math.round(tranco.high * 1.2);
+            }
+        }
+
+        return { ...tranco, sources };
+    }
+
+    // Tier 2: CrUX found = domain has meaningful traffic (top ~10M)
+    if (cruxData?.found) {
+        sources.push('CrUX real-user data (domain in dataset = significant traffic)');
+        let baseLow = 50_000;
+        let baseHigh = 500_000;
+        let confidence = 'Medium';
+
+        // CrUX good LCP % correlates with traffic quality
+        const lcpGood = cruxData.metrics?.lcp?.good ?? 50;
+        if (lcpGood >= 75) {
+            baseLow = 100_000;
+            baseHigh = 2_000_000;
+        } else if (lcpGood >= 50) {
+            baseLow = 50_000;
+            baseHigh = 1_000_000;
+        }
+
+        if (backlinkData?.referringDomains > 50) {
+            sources.push(`${backlinkData.referringDomains} referring domains`);
+            baseLow = Math.round(baseLow * 1.5);
+            baseHigh = Math.round(baseHigh * 1.5);
+            confidence = 'Medium-High';
+        }
+
+        return { low: baseLow, high: baseHigh, confidence, sources };
+    }
+
+    // Tier 3: Backlinks-based estimation
+    if (backlinkData?.referringDomains > 10) {
+        sources.push(`${backlinkData.referringDomains} referring domains`);
+        const refDomains = backlinkData.referringDomains;
+        let baseLow: number, baseHigh: number, confidence: string;
+
+        if (refDomains > 500) {
+            baseLow = 200_000; baseHigh = 5_000_000; confidence = 'Low-Medium';
+        } else if (refDomains > 100) {
+            baseLow = 50_000; baseHigh = 1_000_000; confidence = 'Low-Medium';
+        } else {
+            baseLow = 5_000; baseHigh = 100_000; confidence = 'Low';
+        }
+
+        return { low: baseLow, high: baseHigh, confidence, sources };
+    }
+
+    // Tier 4: Fallback to tech stack heuristics
+    sources.push('Tech stack complexity heuristics');
+    const heuristic = estimateTrafficHeuristic(perfScore, seoScore, sitemapUrls, techs, readability);
+    return { ...heuristic, sources };
+}
+
+function estimateTrafficHeuristic(perfScore: number, seoScore: number, sitemapUrls: number, techs: string[], readability: any): BusinessMetrics['estimatedMonthlyVisitors'] {
     // 1. Calculate enterprise score from tech stack
     let enterpriseScore = 0;
     techs.forEach(t => {
@@ -200,7 +289,7 @@ function estimateTraffic(perfScore: number, seoScore: number, sitemapUrls: numbe
         baseHigh = Math.round(baseHigh * 1.3);
     }
 
-    return { low: baseLow, high: baseHigh, confidence };
+    return { low: baseLow, high: baseHigh, confidence, sources: ['Tech stack heuristics'] };
 }
 
 function calculateTechCost(techs: string[]): BusinessMetrics['techStackCost'] {
@@ -238,7 +327,10 @@ function estimateCarbon(perfScore: number, traffic: BusinessMetrics['estimatedMo
     return { grams: Math.round(co2PerView * 100) / 100, trees, rating };
 }
 
-function calculateDomainAuthority(perfScore: number, seoScore: number, secGrade: any, seoAudit: any, sitemapCount: number, techs: string[]): BusinessMetrics['domainAuthority'] {
+function calculateDomainAuthorityEnhanced(
+    perfScore: number, seoScore: number, secGrade: any, seoAudit: any,
+    sitemapCount: number, techs: string[], backlinkData: any
+): BusinessMetrics['domainAuthority'] {
     const factors: { name: string; score: number; max: number }[] = [];
     let total = 0;
 
@@ -265,20 +357,55 @@ function calculateDomainAuthority(perfScore: number, seoScore: number, secGrade:
     total += Math.min(contentPts, 15);
 
     let crawlPts = 0;
-    if (sitemapCount > 0) crawlPts += 8;
+    if (sitemapCount > 0) crawlPts += 6;
     if (sitemapCount > 50) crawlPts += 4;
-    if (techs.some(t => ['Cloudflare', 'Fastly', 'Amazon CloudFront'].includes(t))) crawlPts += 3;
-    factors.push({ name: 'Crawlability', score: Math.min(crawlPts, 15), max: 15 });
-    total += Math.min(crawlPts, 15);
+    if (techs.some(t => ['Cloudflare', 'Fastly', 'Amazon CloudFront'].includes(t))) crawlPts += 2;
+    factors.push({ name: 'Crawlability', score: Math.min(crawlPts, 12), max: 12 });
+    total += Math.min(crawlPts, 12);
+
+    // Backlink authority (new factor worth up to 13 points)
+    let backlinkPts = 0;
+    const refDomains = backlinkData?.referringDomains ?? 0;
+    const pageRank = backlinkData?.pageRank ?? 0;
+    if (refDomains > 500) backlinkPts += 7;
+    else if (refDomains > 100) backlinkPts += 5;
+    else if (refDomains > 20) backlinkPts += 3;
+    else if (refDomains > 0) backlinkPts += 1;
+    if (pageRank >= 6) backlinkPts += 6;
+    else if (pageRank >= 4) backlinkPts += 4;
+    else if (pageRank >= 2) backlinkPts += 2;
+    factors.push({ name: 'Backlinks', score: Math.min(backlinkPts, 13), max: 13 });
+    total += Math.min(backlinkPts, 13);
 
     return { score: Math.min(total, 100), factors };
 }
 
-function estimateHostingCost(techs: string[], traffic: BusinessMetrics['estimatedMonthlyVisitors']): BusinessMetrics['hostingCost'] {
-    // 1. Detect hosting tier from tech stack
+function estimateHostingCostEnhanced(
+    techs: string[],
+    traffic: BusinessMetrics['estimatedMonthlyVisitors'],
+    ipIntel: any
+): BusinessMetrics['hostingCost'] {
+    // Prefer IP-based cloud provider detection
+    if (ipIntel?.cloudProvider) {
+        const cp = ipIntel.cloudProvider;
+        const avgTraffic = (traffic.low + traffic.high) / 2;
+        let baseMin = 50, baseMax = 500;
+
+        if (avgTraffic > 10_000_000) { baseMin = 5000; baseMax = 50000; }
+        else if (avgTraffic > 1_000_000) { baseMin = 1000; baseMax = 15000; }
+        else if (avgTraffic > 100_000) { baseMin = 200; baseMax = 3000; }
+        else if (avgTraffic > 10_000) { baseMin = 30; baseMax = 500; }
+
+        return {
+            min: Math.round(baseMin * cp.costMultiplier),
+            max: Math.round(baseMax * cp.costMultiplier),
+            provider: `${cp.name} (${cp.tier})`,
+        };
+    }
+
+    // Fall back to tech stack signals
     for (const tier of HOSTING_TIERS) {
         if (techs.some(t => tier.signals.includes(t))) {
-            // Scale within the tier based on estimated traffic
             const avgTraffic = (traffic.low + traffic.high) / 2;
             let scaleFactor = 1;
             if (avgTraffic > 10_000_000) scaleFactor = 5;
@@ -293,7 +420,6 @@ function estimateHostingCost(techs: string[], traffic: BusinessMetrics['estimate
         }
     }
 
-    // Fallback: estimate from traffic volume
     const avgTraffic = (traffic.low + traffic.high) / 2;
     if (avgTraffic > 1_000_000) return { min: 2000, max: 20000, provider: 'Enterprise (estimated)' };
     if (avgTraffic > 100_000) return { min: 200, max: 2000, provider: 'Cloud (estimated)' };
