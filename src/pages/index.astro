@@ -390,22 +390,30 @@ const schemaData = {
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
+    .report-section .section-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
     .report-section .section-badge {
       font-size: 0.6rem;
       padding: 2px 8px;
       border-radius: 99px;
-      background: hsla(var(--accent-primary), 0.1);
-      color: hsl(var(--accent-primary));
+      background: hsla(var(--accent-warm), 0.12);
+      color: hsl(var(--accent-warm));
       font-weight: 700;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
     }
 
     .report-section .section-count {
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       color: hsl(var(--text-muted));
       font-weight: 500;
       margin-left: auto;
       margin-right: 0.5rem;
+      flex-shrink: 0;
     }
 
     /* Section body — single column stack with smooth animation */
@@ -570,7 +578,7 @@ const schemaData = {
         details.className = 'report-section';
         if (defaultOpen) details.open = true;
         const summary = document.createElement('summary');
-        summary.innerHTML = `${icon} ${title}${badgeText ? ` <span class="section-badge">${badgeText}</span>` : ''}<span class="section-count"></span>${CHEVRON_SVG}`;
+        summary.innerHTML = `<span class="section-label">${icon} ${title}</span>${badgeText ? `<span class="section-badge">${badgeText}</span>` : ''}<span class="section-count"></span>${CHEVRON_SVG}`;
         const body = document.createElement('div');
         body.className = 'section-body';
         details.appendChild(summary);
@@ -579,14 +587,14 @@ const schemaData = {
       }
 
       // ─── Create All Sections ───
-      const secOverview     = createSection('🔍', 'Overview');
-      const secPerformance  = createSection('⚡', 'Performance & SEO');
-      const secNetwork      = createSection('🌐', 'Network & DNS');
-      const secBusiness     = createSection('📊', 'Business Intelligence', false, '★ PREMIUM');
-      const secCrawl        = createSection('🕷️', 'Crawlability', false, '★ PREMIUM');
-      const secSecurity     = createSection('🛡️', 'Security & Privacy');
-      const secSocial       = createSection('📱', 'Social & Marketing');
-      const secAI           = createSection('🤖', 'AI Intelligence Suite', false, '★ PREMIUM');
+      const secOverview     = createSection('🔍', 'Tech Stack & Overview');
+      const secPerformance  = createSection('⚡', 'Performance, SEO & Content');
+      const secNetwork      = createSection('🌐', 'Network, DNS & Infrastructure');
+      const secBusiness     = createSection('📊', 'Business Intelligence', false, 'PREMIUM');
+      const secCrawl        = createSection('🕷️', 'Crawlability & Indexing', false, 'PREMIUM');
+      const secSecurity     = createSection('🛡️', 'Security, Privacy & Compliance');
+      const secSocial       = createSection('📱', 'Social Media & Marketing');
+      const secAI           = createSection('🤖', 'AI-Powered Insights', false, 'PREMIUM');
 
       // 0. Historical Tech Stack Diff Card
       if (data.historicalDiff && (data.historicalDiff.added.length > 0 || data.historicalDiff.removed.length > 0)) {
@@ -1905,7 +1913,7 @@ const schemaData = {
         const count = sec.body.children.length;
         if (count > 0) {
           const countEl = sec.el.querySelector('.section-count');
-          if (countEl) countEl.textContent = `${count} card${count !== 1 ? 's' : ''}`;
+          if (countEl) countEl.textContent = `${count} item${count !== 1 ? 's' : ''}`;
           resultsSection.appendChild(sec.el);
         }
       });
