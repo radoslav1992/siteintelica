@@ -15,5 +15,15 @@ export default defineConfig({
   },
   adapter: node({
     mode: 'standalone'
-  })
+  }),
+  vite: {
+    ssr: {
+      external: ['@google/generative-ai']
+    },
+    build: {
+      rollupOptions: {
+        external: ['@google/generative-ai']
+      }
+    }
+  }
 });

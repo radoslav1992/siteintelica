@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
 import { getPublicReport } from '../../../db/client';
+import { askGemini } from '../../../utils/gemini';
 
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
     const user = context.locals.user;
     if (!user) {
-        return new Response(JSON.stringify({ error: "Premium account required for AI features." }), {
+        return new Response(JSON.stringify({ error: "Premium account required." }), {
             status: 401, headers: { 'Content-Type': 'application/json' }
         });
     }
@@ -21,7 +22,7 @@ export const POST: APIRoute = async (context) => {
 
         const report = getPublicReport(domain);
         if (!report) {
-            return new Response(JSON.stringify({ error: "No scan data found. Please scan the site first." }), {
+            return new Response(JSON.stringify({ error: "No scan data found." }), {
                 status: 404, headers: { 'Content-Type': 'application/json' }
             });
         }
@@ -30,9 +31,44 @@ export const POST: APIRoute = async (context) => {
         const techs = (data.technologies || []).map((t: any) => t.name);
         const emails = (data.contacts?.emails || []).slice(0, 3);
         const seoTitle = data.seo?.title || domain;
+        const seoDesc = data.seo?.description || '';
+        const socials = (data.socials || []).join(', ') || 'None found';
 
-        // Generate locally — replace with LLM API call for production
-        const email = generateColdEmail(domain, techs, emails, seoTitle);
+        const prompt = `You are a B2B sales expert. Write a personalized cold outreach email to the company behind "${domain}".
+
+Here is intel from our scan:
+- Technologies they use: ${techs.join(', ')}
+- Their site title: ${seoTitle}
+- Their meta description: ${seoDesc}
+- Their social links: ${socials}
+${emails.length > 0 ? `- Contact email found: ${emails[0]}` : ''}
+
+Write a short, personalized cold email (under 200 words) that:
+1. References a specific technology they use to show research
+2. Identifies a potential pain point or opportunity
+3. Offers a clear value proposition
+4. Ends with a soft call-to-action
+
+Format with **Subject:** line first, then the email body. Use markdown bold for emphasis.`;
+
+        const aiResult = await askGemini(prompt);
+
+        if (aiResult) {
+            return new Response(JSON.stringify({ email: aiResult }), {
+                status: 200, headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Local fallback
+        const hasWordPress = techs.some((t: string) => t === 'WordPress');
+        const hasCDN = techs.some((t: string) => ['Cloudflare', 'Fastly', 'Amazon CloudFront'].includes(t));
+
+        let email = `**Subject:** Quick question about ${domain}'s tech stack\n\n`;
+        email += `Hi there,\n\nI was researching ${domain} and noticed you're using ${techs.slice(0, 3).join(', ')}. `;
+        if (hasWordPress) email += `WordPress is powerful but can be tricky to scale securely. `;
+        if (!hasCDN) email += `I also noticed you don't appear to have a CDN — this could improve load times significantly. `;
+        email += `\n\nWe help companies optimize their web stack for speed and security. Would you be open to a quick chat?\n\nBest,\n[Your Name]`;
+        email += `\n\n---\n*Local fallback. Set GEMINI_API_KEY for AI-personalized emails.*`;
 
         return new Response(JSON.stringify({ email }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
@@ -44,32 +80,3 @@ export const POST: APIRoute = async (context) => {
         });
     }
 };
-
-function generateColdEmail(domain: string, techs: string[], emails: string[], seoTitle: string): string {
-    const hasReact = techs.some(t => ['React', 'Next.js', 'Vue.js', 'Angular'].includes(t));
-    const hasWordPress = techs.some(t => t === 'WordPress');
-    const hasCDN = techs.some(t => ['Cloudflare', 'Fastly', 'Amazon CloudFront'].includes(t));
-
-    let opener = `Hi there,\n\nI was researching ${domain} and noticed `;
-
-    if (hasWordPress) {
-        opener += `you're running on WordPress. `;
-    } else if (hasReact) {
-        opener += `you're using a modern JavaScript framework (${techs.filter(t => ['React', 'Next.js', 'Vue.js', 'Angular'].includes(t)).join(', ')}). `;
-    } else {
-        opener += `your tech stack includes ${techs.slice(0, 3).join(', ')}. `;
-    }
-
-    let body = '';
-    if (!hasCDN) {
-        body += `I noticed you don't appear to be using a CDN — this could be a great opportunity to dramatically improve your page load speeds and SEO rankings.\n\n`;
-    }
-
-    body += `We specialize in helping companies like yours optimize their web infrastructure for peak performance and security.\n\n`;
-    body += `Would you be open to a quick 15-minute call this week to discuss how we could help?\n\n`;
-    body += `Best regards,\n[Your Name]\n[Your Company]`;
-
-    const targetEmail = emails.length > 0 ? `\n\n**Suggested recipient:** ${emails[0]}` : '';
-
-    return `**Subject:** Quick question about ${domain}'s tech stack\n\n${opener}${body}${targetEmail}\n\n---\n*Connect an OpenAI API key for fully AI-personalized outreach emails.*`;
-}
