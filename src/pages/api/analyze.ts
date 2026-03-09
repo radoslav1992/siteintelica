@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import db, { saveScan, getLastScan, getRecentScans } from '../../db/client';
 import { enumerateSubdomains } from '../../utils/subdomain-enum';
 import { calculateSecurityGrade } from '../../utils/security-grade';
-import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks } from '../../utils/seo-tools';
+import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks, extractStructuredData, extractSocialProfiles, scanCookies } from '../../utils/seo-tools';
 import { calculateBusinessMetrics } from '../../utils/business-intel';
 import { getTrancoRank, rankToTraffic } from '../../utils/tranco';
 
@@ -228,6 +228,9 @@ export const POST: APIRoute = async (context) => {
     let readability: any = null;
     let outboundLinks: any = null;
     let brokenLinks: any = null;
+    let structuredData: any = null;
+    let socialProfiles: any = null;
+    let cookieData: any = null;
 
     if (isPremium) {
       try {
@@ -275,6 +278,8 @@ export const POST: APIRoute = async (context) => {
               seoAudit = auditSEO(html);
               readability = analyzeReadability(html);
               outboundLinks = extractOutboundLinks(html, domain);
+              structuredData = extractStructuredData(html);
+              socialProfiles = extractSocialProfiles(html);
 
               // Phase 3: Broken link check (slower, batched)
               try {
@@ -284,6 +289,11 @@ export const POST: APIRoute = async (context) => {
           } catch (e) {
             console.error('HTML fetch for SEO audit failed (non-fatal):', e);
           }
+
+          // Phase 4: Cookie scan
+          try {
+            cookieData = await scanCookies(url);
+          } catch { }
         };
 
         await Promise.race([premiumWork(), premiumTimeout]);
@@ -316,6 +326,9 @@ export const POST: APIRoute = async (context) => {
       securityGrade,
       isPremium,
       trancoRank: isPremium ? (await getTrancoRank(domain)) : null,
+      structuredData: isPremium ? structuredData : null,
+      socialProfiles: isPremium ? socialProfiles : null,
+      cookieData: isPremium ? cookieData : null,
       businessMetrics: isPremium ? calculateBusinessMetrics({
         technologies: parsedData?.technologies,
         performance,

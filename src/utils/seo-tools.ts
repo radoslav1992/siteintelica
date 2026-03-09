@@ -293,3 +293,130 @@ export async function checkBrokenLinks(html: string, baseUrl: string): Promise<{
 
     return results;
 }
+
+// ── Structured Data / Schema.org Validator ──
+export function extractStructuredData(html: string): { jsonLd: any[]; microdata: string[]; totalSchemas: number } {
+    const jsonLd: any[] = [];
+    const jsonLdRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    while ((match = jsonLdRegex.exec(html)) !== null) {
+        try {
+            const parsed = JSON.parse(match[1].trim());
+            if (Array.isArray(parsed)) {
+                parsed.forEach(item => jsonLd.push({ type: item['@type'] || 'Unknown', data: item }));
+            } else {
+                jsonLd.push({ type: parsed['@type'] || 'Unknown', data: parsed });
+            }
+        } catch { }
+    }
+
+    // Microdata (itemtype attributes)
+    const microdata: string[] = [];
+    const microdataRegex = /itemtype=["'](https?:\/\/schema\.org\/[^"']+)["']/gi;
+    while ((match = microdataRegex.exec(html)) !== null) {
+        if (!microdata.includes(match[1])) microdata.push(match[1]);
+    }
+
+    return { jsonLd, microdata, totalSchemas: jsonLd.length + microdata.length };
+}
+
+// ── Social Media Profile Detector ──
+export function extractSocialProfiles(html: string): { platform: string; url: string; handle?: string }[] {
+    const profiles: { platform: string; url: string; handle?: string }[] = [];
+    const seen = new Set<string>();
+
+    const platforms: { name: string; pattern: RegExp; handleExtract?: RegExp }[] = [
+        { name: 'Twitter / X', pattern: /https?:\/\/(www\.)?(twitter\.com|x\.com)\/[a-zA-Z0-9_]+/g, handleExtract: /\/(twitter|x)\.com\/([a-zA-Z0-9_]+)/ },
+        { name: 'LinkedIn', pattern: /https?:\/\/(www\.)?linkedin\.com\/(company|in)\/[a-zA-Z0-9_-]+/g },
+        { name: 'GitHub', pattern: /https?:\/\/(www\.)?github\.com\/[a-zA-Z0-9_-]+/g, handleExtract: /github\.com\/([a-zA-Z0-9_-]+)/ },
+        { name: 'Instagram', pattern: /https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+/g, handleExtract: /instagram\.com\/([a-zA-Z0-9_.]+)/ },
+        { name: 'YouTube', pattern: /https?:\/\/(www\.)?youtube\.com\/(c\/|channel\/|@)[a-zA-Z0-9_-]+/g },
+        { name: 'Facebook', pattern: /https?:\/\/(www\.)?facebook\.com\/[a-zA-Z0-9.]+/g },
+        { name: 'TikTok', pattern: /https?:\/\/(www\.)?tiktok\.com\/@[a-zA-Z0-9_.]+/g },
+        { name: 'Discord', pattern: /https?:\/\/(www\.)?(discord\.gg|discord\.com\/invite)\/[a-zA-Z0-9]+/g },
+        { name: 'Mastodon', pattern: /https?:\/\/[a-zA-Z0-9.-]+\/@[a-zA-Z0-9_]+/g },
+    ];
+
+    for (const p of platforms) {
+        const matches = html.match(p.pattern) || [];
+        for (const url of matches) {
+            const key = p.name;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            let handle: string | undefined;
+            if (p.handleExtract) {
+                const hm = url.match(p.handleExtract);
+                if (hm) handle = '@' + (hm[2] || hm[1]);
+            }
+            profiles.push({ platform: p.name, url, handle });
+        }
+    }
+
+    return profiles;
+}
+
+// ── Cookie & GDPR Scanner ──
+export async function scanCookies(url: string): Promise<{
+    cookies: { name: string; domain: string; secure: boolean; httpOnly: boolean; sameSite: string }[];
+    consentBanner: { detected: boolean; provider: string | null };
+    issues: string[];
+}> {
+    const cookies: { name: string; domain: string; secure: boolean; httpOnly: boolean; sameSite: string }[] = [];
+    let consentProvider: string | null = null;
+    const issues: string[] = [];
+
+    try {
+        const res = await fetch(url, {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'User-Agent': 'SiteIntelica Bot/1.0' },
+            redirect: 'follow'
+        });
+
+        // Parse set-cookie headers
+        const setCookieHeaders = res.headers.getSetCookie?.() || [];
+        for (const header of setCookieHeaders) {
+            const parts = header.split(';').map(p => p.trim());
+            const [nameVal] = parts;
+            const [name] = nameVal.split('=');
+            const domain = parts.find(p => p.toLowerCase().startsWith('domain='))?.split('=')[1] || '';
+            const secure = parts.some(p => p.toLowerCase() === 'secure');
+            const httpOnly = parts.some(p => p.toLowerCase() === 'httponly');
+            const sameSitePart = parts.find(p => p.toLowerCase().startsWith('samesite='));
+            const sameSite = sameSitePart?.split('=')[1] || 'None';
+
+            cookies.push({ name: name.trim(), domain, secure, httpOnly, sameSite });
+
+            if (!secure) issues.push(`Cookie "${name.trim()}" missing Secure flag`);
+            if (!httpOnly && !name.trim().startsWith('_ga')) issues.push(`Cookie "${name.trim()}" missing HttpOnly flag`);
+        }
+
+        // Check HTML for consent banners
+        const html = await res.text();
+        const consentPatterns: { name: string; pattern: RegExp }[] = [
+            { name: 'OneTrust', pattern: /onetrust|optanon/i },
+            { name: 'CookieBot', pattern: /cookiebot|CookieDeclaration/i },
+            { name: 'CookieYes', pattern: /cookie-law-info|cookieyes/i },
+            { name: 'Osano', pattern: /osano\.com/i },
+            { name: 'TrustArc', pattern: /trustarc|truste/i },
+            { name: 'Quantcast', pattern: /quantcast.*choice|__cmpapi/i },
+            { name: 'Didomi', pattern: /didomi/i },
+            { name: 'iubenda', pattern: /iubenda/i },
+            { name: 'Cookie Notice', pattern: /cookie-notice|cookie-consent|gdpr-cookie/i },
+        ];
+        for (const cp of consentPatterns) {
+            if (cp.pattern.test(html)) { consentProvider = cp.name; break; }
+        }
+
+        if (!consentProvider) issues.push('No cookie consent banner detected — may violate GDPR/CCPA');
+        if (cookies.length > 0 && !consentProvider) issues.push('Cookies set before user consent');
+
+    } catch (e) {
+        issues.push('Failed to scan cookies');
+    }
+
+    return {
+        cookies,
+        consentBanner: { detected: !!consentProvider, provider: consentProvider },
+        issues
+    };
+}

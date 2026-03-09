@@ -1601,6 +1601,163 @@ const schemaData = {
         secOverview.body.appendChild(similarCard);
       }
 
+      // ── STRUCTURED DATA / SCHEMA.ORG CARD (Premium → Performance section) ──
+      if (data.isPremium && data.structuredData && data.structuredData.totalSchemas > 0) {
+        const sd = data.structuredData;
+        const sdCard = document.createElement('div');
+        sdCard.className = 'glass-panel category-card animate-fade-in';
+        sdCard.style.animationDelay = `${delay}s`;
+        sdCard.style.borderLeft = '3px solid #FFD700';
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        let schemaItems = '';
+        sd.jsonLd.forEach(s => {
+          schemaItems += `<div style="display:flex; align-items:center; gap:0.5rem; padding:4px 0; border-bottom:1px solid hsla(var(--text-primary),0.05); font-size:0.8rem;">
+            <span style="color:#00e676;">✓</span>
+            <strong>${s.type}</strong>
+            <span style="font-size:0.7rem; color:hsl(var(--text-secondary));">JSON-LD</span>
+          </div>`;
+        });
+        sd.microdata.forEach(m => {
+          const typeName = m.split('/').pop();
+          schemaItems += `<div style="display:flex; align-items:center; gap:0.5rem; padding:4px 0; border-bottom:1px solid hsla(var(--text-primary),0.05); font-size:0.8rem;">
+            <span style="color:#00e676;">✓</span>
+            <strong>${typeName}</strong>
+            <span style="font-size:0.7rem; color:hsl(var(--text-secondary));">Microdata</span>
+          </div>`;
+        });
+        sdCard.innerHTML = `
+          <h3 class="category-title">📋 Structured Data ${premBadge}</h3>
+          <div style="margin-bottom:0.5rem;"><span class="badge" style="background:rgba(0,230,118,0.15); color:#00e676;">${sd.totalSchemas} schema(s) found</span></div>
+          ${schemaItems}
+        `;
+        secPerformance.body.appendChild(sdCard);
+        delay += 0.1;
+      } else if (data.isPremium && data.structuredData) {
+        const sdCard = document.createElement('div');
+        sdCard.className = 'glass-panel category-card animate-fade-in';
+        sdCard.style.animationDelay = `${delay}s`;
+        sdCard.style.borderLeft = '3px solid #ff4b4b';
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+        sdCard.innerHTML = `
+          <h3 class="category-title">📋 Structured Data ${premBadge}</h3>
+          <div style="color:#ff4b4b; font-size:0.85rem; font-weight:600;">⚠️ No structured data found</div>
+          <div style="font-size:0.75rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">
+            Adding Schema.org JSON-LD markup enables rich snippets in Google search results (ratings, prices, FAQs, etc.)
+          </div>
+        `;
+        secPerformance.body.appendChild(sdCard);
+        delay += 0.1;
+      }
+
+      // ── CORE WEB VITALS CARD (Performance section) ──
+      if (data.performance) {
+        const perf = data.performance;
+        const cwvCard = document.createElement('div');
+        cwvCard.className = 'glass-panel category-card animate-fade-in';
+        cwvCard.style.animationDelay = `${delay}s`;
+
+        const metrics = [
+          { name: 'LCP', label: 'Largest Contentful Paint', value: perf.largestContentfulPaint || perf.lcp, unit: 's', good: 2.5, poor: 4.0 },
+          { name: 'CLS', label: 'Cumulative Layout Shift', value: perf.cumulativeLayoutShift || perf.cls, unit: '', good: 0.1, poor: 0.25 },
+          { name: 'INP', label: 'Interaction to Next Paint', value: perf.interactionToNextPaint || perf.inp || perf.totalBlockingTime, unit: 'ms', good: 200, poor: 500 },
+        ];
+
+        let cwvHTML = '';
+        metrics.forEach(m => {
+          if (m.value == null) return;
+          const val = typeof m.value === 'number' ? m.value : parseFloat(m.value);
+          if (isNaN(val)) return;
+          const status = val <= m.good ? 'Good' : val <= m.poor ? 'Needs Improvement' : 'Poor';
+          const color = val <= m.good ? '#00e676' : val <= m.poor ? '#ffa726' : '#ff4b4b';
+          const displayVal = m.unit === 's' ? val.toFixed(1) + 's' : m.unit === 'ms' ? Math.round(val) + 'ms' : val.toFixed(3);
+          cwvHTML += `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid hsla(var(--text-primary),0.05);">
+              <div>
+                <div style="font-weight:600; font-size:0.85rem;">${m.name}</div>
+                <div style="font-size:0.7rem; color:hsl(var(--text-secondary));">${m.label}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:1.1rem; font-weight:700; color:${color};">${displayVal}</span>
+                <span class="badge" style="font-size:0.6rem; background:${color}22; color:${color};">${status}</span>
+              </div>
+            </div>`;
+        });
+
+        if (cwvHTML) {
+          cwvCard.innerHTML = `
+            <h3 class="category-title">🔬 Core Web Vitals</h3>
+            ${cwvHTML}
+            <div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">Google uses these metrics as ranking signals. Green = passed.</div>
+          `;
+          secPerformance.body.appendChild(cwvCard);
+          delay += 0.1;
+        }
+      }
+
+      // ── COOKIE & GDPR CARD (Premium → Security section) ──
+      if (data.isPremium && data.cookieData) {
+        const cd = data.cookieData;
+        const cookieCard = document.createElement('div');
+        cookieCard.className = 'glass-panel category-card animate-fade-in';
+        cookieCard.style.animationDelay = `${delay}s`;
+        const hasIssues = cd.issues.length > 0;
+        cookieCard.style.borderLeft = `3px solid ${hasIssues ? '#ffa726' : '#00e676'}`;
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+
+        let cookieRows = '';
+        cd.cookies.slice(0, 10).forEach(c => {
+          cookieRows += `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid hsla(var(--text-primary),0.05); font-size:0.75rem;">
+            <span style="font-weight:600;">${c.name.substring(0, 25)}</span>
+            <span>${c.secure ? '🔒' : '⚠️'} ${c.httpOnly ? 'HttpOnly' : ''} ${c.sameSite}</span>
+          </div>`;
+        });
+
+        let issuesHtml = cd.issues.map(i => `<div style="font-size:0.75rem; color:#ffa726; padding:2px 0;">⚠️ ${i}</div>`).join('');
+
+        cookieCard.innerHTML = `
+          <h3 class="category-title">🍪 Cookie & GDPR Scan ${premBadge}</h3>
+          <div style="display:flex; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+            <span class="badge" style="font-size:0.75rem;">${cd.cookies.length} cookie${cd.cookies.length !== 1 ? 's' : ''}</span>
+            <span class="badge" style="font-size:0.75rem; background:${cd.consentBanner.detected ? 'rgba(0,230,118,0.15)' : 'rgba(255,75,75,0.15)'}; color:${cd.consentBanner.detected ? '#00e676' : '#ff4b4b'};">
+              ${cd.consentBanner.detected ? `✓ ${cd.consentBanner.provider}` : '✗ No consent banner'}
+            </span>
+          </div>
+          ${cookieRows}
+          ${issuesHtml ? `<div style="margin-top:0.5rem;">${issuesHtml}</div>` : ''}
+        `;
+        secSecurity.body.appendChild(cookieCard);
+        delay += 0.1;
+      }
+
+      // ── SOCIAL MEDIA PROFILES CARD (Premium → Social section) ──
+      if (data.isPremium && data.socialProfiles && data.socialProfiles.length > 0) {
+        const sp = data.socialProfiles;
+        const spCard = document.createElement('div');
+        spCard.className = 'glass-panel category-card animate-fade-in';
+        spCard.style.animationDelay = `${delay}s`;
+        spCard.style.borderLeft = '3px solid #FFD700';
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+
+        const platformIcons = { 'Twitter / X': '𝕏', 'LinkedIn': '💼', 'GitHub': '🐙', 'Instagram': '📸', 'YouTube': '▶️', 'Facebook': '📘', 'TikTok': '🎵', 'Discord': '💬', 'Mastodon': '🐘' };
+        let profileRows = sp.map(p => `
+          <a href="${p.url}" target="_blank" rel="noopener" style="display:flex; align-items:center; gap:0.75rem; padding:6px 0; border-bottom:1px solid hsla(var(--text-primary),0.05); text-decoration:none; color:inherit;">
+            <span style="font-size:1.2rem;">${platformIcons[p.platform] || '🔗'}</span>
+            <div>
+              <div style="font-weight:600; font-size:0.85rem;">${p.platform}</div>
+              ${p.handle ? `<div style="font-size:0.7rem; color:hsl(var(--accent-primary));">${p.handle}</div>` : ''}
+            </div>
+          </a>
+        `).join('');
+
+        spCard.innerHTML = `
+          <h3 class="category-title">📱 Social Presence ${premBadge}</h3>
+          <div style="margin-bottom:0.5rem;"><span class="badge">${sp.length} platform${sp.length !== 1 ? 's' : ''} found</span></div>
+          ${profileRows}
+        `;
+        secSocial.body.appendChild(spCard);
+        delay += 0.1;
+      }
+
       // ─── Append populated sections to results ───
       const allSections = [secOverview, secPerformance, secNetwork, secBusiness, secCrawl, secSecurity, secSocial, secAI];
       allSections.forEach(sec => {
