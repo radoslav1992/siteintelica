@@ -579,14 +579,14 @@ const schemaData = {
       }
 
       // ─── Create All Sections ───
-      const secOverview     = createSection('🔍', 'Overview', true);
-      const secPerformance  = createSection('⚡', 'Performance & SEO', true);
+      const secOverview     = createSection('🔍', 'Overview');
+      const secPerformance  = createSection('⚡', 'Performance & SEO');
       const secNetwork      = createSection('🌐', 'Network & DNS');
-      const secBusiness     = createSection('📊', 'Business Intelligence', true, '★ PREMIUM');
+      const secBusiness     = createSection('📊', 'Business Intelligence', false, '★ PREMIUM');
       const secCrawl        = createSection('🕷️', 'Crawlability', false, '★ PREMIUM');
       const secSecurity     = createSection('🛡️', 'Security & Privacy');
       const secSocial       = createSection('📱', 'Social & Marketing');
-      const secAI           = createSection('🤖', 'AI Intelligence Suite', true, '★ PREMIUM');
+      const secAI           = createSection('🤖', 'AI Intelligence Suite', false, '★ PREMIUM');
 
       // 0. Historical Tech Stack Diff Card
       if (data.historicalDiff && (data.historicalDiff.added.length > 0 || data.historicalDiff.removed.length > 0)) {
