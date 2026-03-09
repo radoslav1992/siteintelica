@@ -1,6 +1,6 @@
 /**
- * Business Intelligence Calculators
- * Derives estimated metrics from scan data without external APIs.
+ * Business Intelligence Calculators v2
+ * Much more realistic estimations using tech-stack-weighted heuristics.
  */
 
 // ── Known SaaS pricing (monthly, USD) ──
@@ -51,19 +51,47 @@ const TECH_PRICING: Record<string, { min: number; max: number; label: string }> 
     'Ghost': { min: 9, max: 199, label: 'Publishing platform' },
 };
 
-// ── Hosting cost by server tech ──
-const HOSTING_COSTS: Record<string, { min: number; max: number }> = {
-    'Vercel': { min: 0, max: 20 },
-    'Netlify': { min: 0, max: 25 },
-    'AWS': { min: 50, max: 500 },
-    'Google Cloud': { min: 50, max: 500 },
-    'Azure': { min: 50, max: 500 },
-    'Heroku': { min: 7, max: 250 },
-    'DigitalOcean': { min: 5, max: 100 },
-    'Nginx': { min: 5, max: 50 },
-    'Apache': { min: 5, max: 50 },
-    'IIS': { min: 20, max: 200 },
+// ── Enterprise signals: companies using these have massive traffic ──
+const ENTERPRISE_SIGNALS: Record<string, number> = {
+    // Payment/fintech (millions of visitors)
+    'Stripe': 8, 'PayPal': 8, 'Adyen': 7, 'Braintree': 7,
+    // Enterprise CDNs
+    'Akamai': 7, 'Fastly': 6, 'Amazon CloudFront': 6,
+    // Enterprise tools
+    'Salesforce': 6, 'Optimizely': 6, 'LaunchDarkly': 6,
+    'Segment': 6, 'Datadog': 6, 'New Relic': 5,
+    // Marketing at scale
+    'HubSpot': 5, 'Marketo': 7, 'Adobe Analytics': 7,
+    'Google Analytics': 2, 'Google Tag Manager': 2,
+    // E-commerce
+    'Shopify Plus': 7, 'Magento': 5, 'BigCommerce': 4,
+    // Large frameworks (indicate engineering investment)
+    'React': 3, 'Next.js': 3, 'Angular': 3, 'Vue.js': 3,
 };
+
+// ── Hosting tiers by tech signals ──
+const HOSTING_TIERS = [
+    {
+        signals: ['Akamai', 'Fastly', 'Amazon CloudFront', 'AWS', 'Amazon Web Services'],
+        tier: 'Enterprise Cloud', min: 5000, max: 100000
+    },
+    {
+        signals: ['Google Cloud', 'Azure', 'Amazon S3'],
+        tier: 'Cloud Platform', min: 1000, max: 50000
+    },
+    {
+        signals: ['Cloudflare', 'Heroku', 'DigitalOcean'],
+        tier: 'Cloud / Managed', min: 50, max: 2000
+    },
+    {
+        signals: ['Vercel', 'Netlify', 'Render'],
+        tier: 'Serverless / JAMstack', min: 0, max: 100
+    },
+    {
+        signals: ['Wix', 'Squarespace', 'Webflow'],
+        tier: 'Website Builder', min: 15, max: 160
+    },
+];
 
 export interface BusinessMetrics {
     estimatedMonthlyVisitors: { low: number; high: number; confidence: string };
@@ -83,49 +111,92 @@ export function calculateBusinessMetrics(data: any): BusinessMetrics {
     const readability = data.readability;
     const seoAudit = data.seoAudit;
 
+    const trafficEstimate = estimateTraffic(perfScore, seoScore, sitemapCount, techs, readability);
+
     return {
-        estimatedMonthlyVisitors: estimateTraffic(perfScore, seoScore, sitemapCount, techs, readability),
+        estimatedMonthlyVisitors: trafficEstimate,
         techStackCost: calculateTechCost(techs),
-        carbonFootprint: estimateCarbon(readability?.wordCount ?? 1000, perfScore),
+        carbonFootprint: estimateCarbon(perfScore, trafficEstimate),
         domainAuthority: calculateDomainAuthority(perfScore, seoScore, secGrade, seoAudit, sitemapCount, techs),
-        hostingCost: estimateHostingCost(techs),
-        adRevenueEstimate: estimateAdRevenue(techs, data.trackers, perfScore, seoScore, sitemapCount)
+        hostingCost: estimateHostingCost(techs, trafficEstimate),
+        adRevenueEstimate: estimateAdRevenue(techs, data.trackers, trafficEstimate)
     };
 }
 
 function estimateTraffic(perfScore: number, seoScore: number, sitemapUrls: number, techs: string[], readability: any): BusinessMetrics['estimatedMonthlyVisitors'] {
-    // Base traffic from content signals
-    let base = Math.max(sitemapUrls * 15, 500); // ~15 visits per indexed page/month
+    // 1. Calculate enterprise score from tech stack
+    let enterpriseScore = 0;
+    techs.forEach(t => {
+        enterpriseScore += (ENTERPRISE_SIGNALS[t] || 0);
+    });
 
-    // Performance multiplier (fast sites get more traffic)
-    const perfMultiplier = perfScore >= 90 ? 2.5 : perfScore >= 70 ? 1.8 : perfScore >= 50 ? 1.2 : 0.8;
+    // 2. Tech stack complexity as a scale signal
+    const techCount = techs.length;
 
-    // SEO multiplier
-    const seoMultiplier = seoScore >= 90 ? 2.0 : seoScore >= 70 ? 1.5 : seoScore >= 50 ? 1.1 : 0.7;
-
-    // Tech sophistication bonus (enterprise tools = more traffic)
-    const enterpriseTechs = ['Salesforce', 'HubSpot', 'Segment', 'Optimizely', 'Akamai', 'Shopify Plus'];
-    const hasEnterprise = techs.some(t => enterpriseTechs.includes(t));
-    if (hasEnterprise) base *= 5;
-
-    // E-commerce multiplier
-    const isEcommerce = techs.some(t => ['Shopify', 'WooCommerce', 'BigCommerce', 'Magento'].includes(t));
-    if (isEcommerce) base *= 3;
-
-    // Content richness
-    const wordCount = readability?.wordCount ?? 500;
-    if (wordCount > 3000) base *= 1.5;
-
-    const estimated = Math.round(base * perfMultiplier * seoMultiplier);
-    const low = Math.round(estimated * 0.5);
-    const high = Math.round(estimated * 2);
-
+    // 3. Determine traffic tier based on signals
+    let baseLow: number, baseHigh: number;
     let confidence: string;
-    if (sitemapUrls > 50 && perfScore > 0) confidence = 'Medium';
-    else if (sitemapUrls > 10) confidence = 'Low-Medium';
-    else confidence = 'Low';
 
-    return { low, high, confidence };
+    if (enterpriseScore >= 20) {
+        // Massive enterprise (Stripe, Amazon, etc.) - millions
+        baseLow = 5_000_000;
+        baseHigh = 50_000_000;
+        confidence = 'Medium';
+    } else if (enterpriseScore >= 12) {
+        // Large company - hundreds of thousands to millions
+        baseLow = 500_000;
+        baseHigh = 10_000_000;
+        confidence = 'Medium';
+    } else if (enterpriseScore >= 6) {
+        // Mid-market - tens of thousands to hundreds of thousands
+        baseLow = 50_000;
+        baseHigh = 1_000_000;
+        confidence = 'Low-Medium';
+    } else if (techCount >= 15) {
+        // Many technologies = significant site
+        baseLow = 20_000;
+        baseHigh = 500_000;
+        confidence = 'Low-Medium';
+    } else if (techCount >= 8) {
+        // Moderate complexity
+        baseLow = 5_000;
+        baseHigh = 100_000;
+        confidence = 'Low';
+    } else if (techCount >= 4) {
+        // Small-medium site
+        baseLow = 1_000;
+        baseHigh = 30_000;
+        confidence = 'Low';
+    } else {
+        // Minimal tech stack
+        baseLow = 100;
+        baseHigh = 5_000;
+        confidence = 'Low';
+    }
+
+    // 4. Boost from sitemap (more pages = more traffic)
+    if (sitemapUrls > 1000) {
+        baseLow *= 3;
+        baseHigh *= 3;
+        if (confidence === 'Low') confidence = 'Low-Medium';
+    } else if (sitemapUrls > 100) {
+        baseLow *= 1.5;
+        baseHigh *= 1.5;
+    }
+
+    // 5. Performance/SEO quality multiplier
+    const qualityMult = ((perfScore / 100) * 0.5 + (seoScore / 100) * 0.5) * 0.5 + 0.75;
+    baseLow = Math.round(baseLow * qualityMult);
+    baseHigh = Math.round(baseHigh * qualityMult);
+
+    // 6. Content volume boost
+    const wordCount = readability?.wordCount ?? 0;
+    if (wordCount > 5000) {
+        baseLow = Math.round(baseLow * 1.3);
+        baseHigh = Math.round(baseHigh * 1.3);
+    }
+
+    return { low: baseLow, high: baseHigh, confidence };
 }
 
 function calculateTechCost(techs: string[]): BusinessMetrics['techStackCost'] {
@@ -141,23 +212,18 @@ function calculateTechCost(techs: string[]): BusinessMetrics['techStackCost'] {
         }
     });
 
-    // Sort by max cost descending
     breakdown.sort((a, b) => b.max - a.max);
-
     return { totalMin, totalMax, breakdown: breakdown.slice(0, 10) };
 }
 
-function estimateCarbon(wordCount: number, perfScore: number): BusinessMetrics['carbonFootprint'] {
-    // Average web page = ~1.76g CO2 per view (websitecarbon.com methodology)
-    // Adjusted by page weight (approximated from word count + perf)
-    const avgPageWeight = 2.0; // MB average
+function estimateCarbon(perfScore: number, traffic: BusinessMetrics['estimatedMonthlyVisitors']): BusinessMetrics['carbonFootprint'] {
     const estimatedWeight = perfScore >= 80 ? 1.2 : perfScore >= 50 ? 2.0 : 3.5;
-    const co2PerView = (estimatedWeight / avgPageWeight) * 1.76; // grams
+    const co2PerView = (estimatedWeight / 2.0) * 1.76; // grams
 
-    // Assume ~1000 monthly page views for the estimate
-    const monthlyGrams = Math.round(co2PerView * 1000);
-    const yearlyKg = (monthlyGrams * 12) / 1000;
-    const trees = Math.max(1, Math.round(yearlyKg / 21)); // 1 tree absorbs ~21kg CO2/year
+    const avgMonthly = (traffic.low + traffic.high) / 2;
+    const monthlyKg = (co2PerView * avgMonthly) / 1000;
+    const yearlyKg = monthlyKg * 12;
+    const trees = Math.max(1, Math.round(yearlyKg / 21));
 
     let rating: string;
     if (co2PerView <= 1.0) rating = 'Excellent — cleaner than 80% of sites';
@@ -172,23 +238,19 @@ function calculateDomainAuthority(perfScore: number, seoScore: number, secGrade:
     const factors: { name: string; score: number; max: number }[] = [];
     let total = 0;
 
-    // Performance (25 pts)
     const perfPts = Math.round((perfScore / 100) * 25);
     factors.push({ name: 'Performance', score: perfPts, max: 25 });
     total += perfPts;
 
-    // SEO Score (25 pts)
     const seoPts = Math.round((seoScore / 100) * 25);
     factors.push({ name: 'SEO', score: seoPts, max: 25 });
     total += seoPts;
 
-    // Security (20 pts)
     const secScore = secGrade?.score ?? 0;
     const secPts = Math.round((secScore / 100) * 20);
     factors.push({ name: 'Security', score: secPts, max: 20 });
     total += secPts;
 
-    // Content Quality (15 pts)
     let contentPts = 0;
     if (seoAudit?.h1Count === 1) contentPts += 5;
     if (seoAudit?.canonical) contentPts += 3;
@@ -198,7 +260,6 @@ function calculateDomainAuthority(perfScore: number, seoScore: number, secGrade:
     factors.push({ name: 'Content Quality', score: Math.min(contentPts, 15), max: 15 });
     total += Math.min(contentPts, 15);
 
-    // Crawlability (15 pts)
     let crawlPts = 0;
     if (sitemapCount > 0) crawlPts += 8;
     if (sitemapCount > 50) crawlPts += 4;
@@ -209,44 +270,47 @@ function calculateDomainAuthority(perfScore: number, seoScore: number, secGrade:
     return { score: Math.min(total, 100), factors };
 }
 
-function estimateHostingCost(techs: string[]): BusinessMetrics['hostingCost'] {
-    for (const tech of techs) {
-        if (HOSTING_COSTS[tech]) {
-            return { ...HOSTING_COSTS[tech], provider: tech };
+function estimateHostingCost(techs: string[], traffic: BusinessMetrics['estimatedMonthlyVisitors']): BusinessMetrics['hostingCost'] {
+    // 1. Detect hosting tier from tech stack
+    for (const tier of HOSTING_TIERS) {
+        if (techs.some(t => tier.signals.includes(t))) {
+            // Scale within the tier based on estimated traffic
+            const avgTraffic = (traffic.low + traffic.high) / 2;
+            let scaleFactor = 1;
+            if (avgTraffic > 10_000_000) scaleFactor = 5;
+            else if (avgTraffic > 1_000_000) scaleFactor = 3;
+            else if (avgTraffic > 100_000) scaleFactor = 1.5;
+
+            return {
+                min: Math.round(tier.min * scaleFactor),
+                max: Math.round(tier.max * scaleFactor),
+                provider: tier.tier
+            };
         }
     }
-    // Default estimate
-    return { min: 10, max: 100, provider: 'Unknown' };
+
+    // Fallback: estimate from traffic volume
+    const avgTraffic = (traffic.low + traffic.high) / 2;
+    if (avgTraffic > 1_000_000) return { min: 2000, max: 20000, provider: 'Enterprise (estimated)' };
+    if (avgTraffic > 100_000) return { min: 200, max: 2000, provider: 'Cloud (estimated)' };
+    if (avgTraffic > 10_000) return { min: 20, max: 200, provider: 'Managed hosting (estimated)' };
+    return { min: 5, max: 50, provider: 'Shared hosting (estimated)' };
 }
 
-function estimateAdRevenue(techs: string[], trackers: any, perfScore: number, seoScore: number, sitemapCount: number): BusinessMetrics['adRevenueEstimate'] | null {
+function estimateAdRevenue(techs: string[], trackers: any, traffic: BusinessMetrics['estimatedMonthlyVisitors']): BusinessMetrics['adRevenueEstimate'] | null {
     const adNetworks: string[] = [];
-
-    // Check for known ad technologies
     const adTechs = ['Google AdSense', 'Google Ad Manager', 'Amazon Associates', 'Media.net', 'Ezoic', 'Mediavine', 'AdThrive', 'PropellerAds'];
-    techs.forEach(t => {
-        if (adTechs.includes(t)) adNetworks.push(t);
-    });
-
-    // Check trackers for ad-related pixels
+    techs.forEach(t => { if (adTechs.includes(t)) adNetworks.push(t); });
     if (trackers && Array.isArray(trackers)) {
         trackers.forEach((t: any) => {
-            if (t.name && ['Facebook Pixel', 'Google Ads', 'TikTok Pixel'].includes(t.name)) {
-                adNetworks.push(t.name);
-            }
+            if (t.name && ['Facebook Pixel', 'Google Ads', 'TikTok Pixel'].includes(t.name)) adNetworks.push(t.name);
         });
     }
-
     if (adNetworks.length === 0) return null;
 
-    // Estimate traffic first
-    const baseTraffic = Math.max(sitemapCount * 15, 500);
-    const multiplier = (perfScore / 100 + seoScore / 100) / 2 * 2;
-    const estPageViews = Math.round(baseTraffic * multiplier);
-
-    // Average CPM for display ads: $1-5
-    const monthlyMin = Math.round(estPageViews * 1 / 1000);
-    const monthlyMax = Math.round(estPageViews * 5 / 1000);
+    const avgTraffic = (traffic.low + traffic.high) / 2;
+    const monthlyMin = Math.round(avgTraffic * 1 / 1000);
+    const monthlyMax = Math.round(avgTraffic * 5 / 1000);
 
     return { monthlyMin, monthlyMax, networks: adNetworks };
 }
