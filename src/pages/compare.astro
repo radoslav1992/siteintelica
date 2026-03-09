@@ -113,6 +113,42 @@ if (!user) {
     const results = document.getElementById('compareResults')!;
     const status = document.getElementById('compareStatus')!;
 
+    function buildScoreComparison(perfA: any, perfB: any, gradeA: any, gradeB: any) {
+      const metrics = [
+        { label: 'Performance', a: perfA.score, b: perfB.score },
+        { label: 'SEO', a: perfA.seo, b: perfB.seo },
+        { label: 'Accessibility', a: perfA.accessibility, b: perfB.accessibility },
+        { label: 'Security', a: gradeA.score, b: gradeB.score },
+      ].filter(m => m.a != null || m.b != null);
+
+      const rows = metrics.map(m => {
+        const valA = m.a ?? 0;
+        const valB = m.b ?? 0;
+        const winA = valA > valB;
+        const winB = valB > valA;
+        return '<div>' +
+          '<div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:3px;">' +
+            '<span style="font-weight:' + (winA ? '700' : '400') + '; color:' + (winA ? '#00e676' : 'inherit') + ';">' + valA + '</span>' +
+            '<span style="color:hsl(var(--text-secondary));">' + m.label + '</span>' +
+            '<span style="font-weight:' + (winB ? '700' : '400') + '; color:' + (winB ? '#00e676' : 'inherit') + ';">' + valB + '</span>' +
+          '</div>' +
+          '<div style="display:flex; gap:2px; height:6px;">' +
+            '<div style="flex:1; background:rgba(255,255,255,0.06); border-radius:3px 0 0 3px; overflow:hidden; direction:rtl;">' +
+              '<div style="height:100%; width:' + valA + '%; background:' + (winA ? 'hsl(var(--accent-primary))' : 'rgba(255,255,255,0.15)') + '; border-radius:3px 0 0 3px;"></div>' +
+            '</div>' +
+            '<div style="flex:1; background:rgba(255,255,255,0.06); border-radius:0 3px 3px 0; overflow:hidden;">' +
+              '<div style="height:100%; width:' + valB + '%; background:' + (winB ? 'hsl(var(--accent-secondary))' : 'rgba(255,255,255,0.15)') + '; border-radius:0 3px 3px 0;"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      return '<div class="glass-panel" style="padding:1.5rem; margin-bottom:0.75rem;">' +
+        '<h3 style="font-weight:700; font-size:1rem; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">Score Comparison</h3>' +
+        '<div style="display:flex; flex-direction:column; gap:0.6rem;">' + rows + '</div>' +
+      '</div>';
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const urlA = (document.getElementById('urlA') as HTMLInputElement).value;
@@ -210,6 +246,8 @@ if (!user) {
               ${onlyB.length === 0 ? '<span style="color:hsl(var(--text-secondary)); font-size:0.85rem;">None.</span>' : ''}
             </div>
           </div>
+
+          ${buildScoreComparison(perfA, perfB, gradeA, gradeB)}
 
           <div class="glass-panel" style="padding:1.5rem; border-top:3px solid hsl(var(--accent-warm));">
             <h3 style="font-weight:700; font-size:1rem; margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">AI Competitor Gap Analysis <span class="badge" style="font-size:0.6rem; margin-left:6px; background:hsla(var(--accent-warm), 0.12); color:hsl(var(--accent-warm));">PREMIUM</span></h3>

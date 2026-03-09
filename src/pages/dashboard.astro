@@ -58,8 +58,20 @@ const webhookUrl = userData?.webhook_url || '';
         <p id="webhookStatus" class="text-sm text-secondary hidden" style="margin-top:0.75rem;"></p>
       </div>
 
+      <!-- API Usage Card -->
+      <div class="glass-panel card animate-fade-in" style="animation-delay:0.1s; border-top: 3px solid hsl(var(--accent-warm));">
+        <h2 class="card-title">API Usage</h2>
+        <p class="text-secondary text-sm mb-6">Track your API consumption over the last 30 days.</p>
+        <div id="usageStats" style="min-height:100px;">
+          <p class="text-secondary text-sm">Loading usage data...</p>
+        </div>
+        <div id="usageChart" style="margin-top:1rem;">
+          <canvas id="usageCanvas" height="120"></canvas>
+        </div>
+      </div>
+
       <!-- Bulk Scanner -->
-      <div class="glass-panel card animate-fade-in card-dashed" style="animation-delay:0.1s;">
+      <div class="glass-panel card animate-fade-in card-dashed" style="animation-delay:0.15s;">
         <div class="bulk-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
             <path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 15h6" /><path d="M12 12v6" />
@@ -261,6 +273,72 @@ const webhookUrl = userData?.webhook_url || '';
         bulkBtn.innerText = 'Run Bulk Analysis';
       });
     }
+
+    // Load API usage stats
+    (async () => {
+      const statsEl = document.getElementById('usageStats');
+      const canvasEl = document.getElementById('usageCanvas') as HTMLCanvasElement;
+      try {
+        const res = await fetch('/api/user/usage');
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+
+        const totalCalls = data.totalUsage || 0;
+        const endpoints = data.endpointBreakdown || {};
+        const endpointList = Object.entries(endpoints)
+          .sort(([, a]: any, [, b]: any) => b - a)
+          .slice(0, 5)
+          .map(([ep, count]) => `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.78rem;"><span class="text-secondary">${ep}</span><strong>${count}</strong></div>`)
+          .join('');
+
+        statsEl!.innerHTML = `
+          <div style="display:flex; gap:1.5rem; margin-bottom:1rem;">
+            <div><div style="font-size:1.5rem; font-weight:800; color:hsl(var(--accent-primary));">${totalCalls}</div><div style="font-size:0.75rem; color:hsl(var(--text-secondary));">Total API calls</div></div>
+          </div>
+          ${endpointList ? `<div style="margin-top:0.5rem;">${endpointList}</div>` : '<p class="text-secondary text-sm">No usage recorded yet.</p>'}
+        `;
+
+        // Draw usage chart
+        const daily = data.dailyTotals || {};
+        const days = Object.keys(daily).sort();
+        if (days.length > 1 && canvasEl) {
+          const ctx = canvasEl.getContext('2d')!;
+          const dpr = window.devicePixelRatio || 1;
+          const rect = canvasEl.parentElement!.getBoundingClientRect();
+          canvasEl.width = rect.width * dpr;
+          canvasEl.height = 120 * dpr;
+          canvasEl.style.width = rect.width + 'px';
+          canvasEl.style.height = '120px';
+          ctx.scale(dpr, dpr);
+
+          const W = rect.width, H = 120;
+          const pad = { top: 10, right: 10, bottom: 20, left: 30 };
+          const vals = days.map(d => daily[d]);
+          const maxVal = Math.max(...vals, 1);
+
+          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+          ctx.lineWidth = 1;
+          for (let v = 0; v <= maxVal; v += Math.ceil(maxVal / 4)) {
+            const y = pad.top + (H - pad.top - pad.bottom) * (1 - v / maxVal);
+            ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+            ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '9px Inter'; ctx.textAlign = 'right';
+            ctx.fillText(v.toString(), pad.left - 4, y + 3);
+          }
+
+          ctx.beginPath();
+          ctx.strokeStyle = 'hsl(165, 80%, 48%)';
+          ctx.lineWidth = 2;
+          vals.forEach((v, i) => {
+            const x = pad.left + (i / (vals.length - 1)) * (W - pad.left - pad.right);
+            const y = pad.top + (H - pad.top - pad.bottom) * (1 - v / maxVal);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        }
+      } catch {
+        statsEl!.innerHTML = '<p class="text-secondary text-sm">Unable to load usage data.</p>';
+      }
+    })();
 
     const webhookForm = document.getElementById('webhookForm') as HTMLFormElement;
     const saveWebhookBtn = document.getElementById('saveWebhookBtn') as HTMLButtonElement;

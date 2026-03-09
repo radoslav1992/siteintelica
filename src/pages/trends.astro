@@ -39,10 +39,10 @@ const schemaData = {
             return (
               <div class="trend-item">
                 <div class="trend-item-header">
-                  <span class="trend-name">
+                  <a href={`/tech/${tech.name.toLowerCase().replace(/[\s.]/g, '-')}`} class="trend-name" style="text-decoration:none; color:inherit;">
                     <span class="trend-rank">#{index + 1}</span>
                     {tech.name}
-                  </span>
+                  </a>
                   <span class="trend-count">{tech.count.toLocaleString()} scans</span>
                 </div>
                 <div class="progress-bg">
