@@ -23,6 +23,8 @@ Advanced tech stack analyzer and competitor intelligence tool. X-Ray any website
 - **Security Audit** — A–F security grade, HTTP headers, SSL/TLS, SPF/DMARC
 - **SEO Analysis** — Meta tags, Core Web Vitals, sitemap, robots.txt
 - **Performance Scores** — Lighthouse Performance, SEO, and Accessibility via PageSpeed API
+- **CrUX Real User Metrics** — Chrome UX Report field data (LCP, CLS, INP, FCP, TTFB) with good/needs-work/poor distribution bars
+- **Infrastructure Intelligence** — IP-to-ASN cloud provider detection (AWS, GCP, Cloudflare, Hetzner, etc.) with hosting tier classification
 - **Global Tech Trends** — `/trends` aggregated stats with clickable deep dives into each technology
 - **Technology Deep Dives** — `/tech/[slug]` pages showing adoption rate, companion techs, and performance distribution
 - **Leaderboard** — Most-scanned domains
@@ -32,7 +34,9 @@ Advanced tech stack analyzer and competitor intelligence tool. X-Ray any website
 
 ### Premium (Requires Account)
 
-- **Business Intelligence** — Traffic estimates (Tranco-powered), domain authority, tech costs, carbon footprint, ad revenue
+- **Business Intelligence** — Multi-source traffic estimation (Tranco + CrUX + backlinks + tech heuristics), domain authority with backlink factor, tech costs, carbon footprint, ad revenue
+- **Backlink Profile** — Referring domain count via CommonCrawl, PageRank score via Open PageRank API, sample referring domains
+- **Keyword Intelligence** — On-page keyword extraction with prominence scoring, search intent classification, topic clusters, content gap detection
 - **Accessibility Audit** — Automated a11y checks: alt text, landmarks, heading hierarchy, zoom, ARIA, and more
 - **Side-by-Side Comparison** — Dual-bar score comparison, tech overlap/diff, AI-powered gap analysis
 - **Competitor Monitoring** — Watchlist up to 20 domains with real-time SSE updates when stacks change
@@ -94,9 +98,13 @@ src/
 ├── styles/global.css    # Design system (CSS variables, components)
 └── utils/               # Business logic
     ├── accessibility.ts # Automated accessibility audit
-    ├── business-intel.ts# Traffic, cost, carbon, authority calculators
+    ├── backlinks.ts     # CommonCrawl + Open PageRank backlink estimation
+    ├── business-intel.ts# Multi-source traffic, cost, carbon, authority calculators
+    ├── crux.ts          # Chrome UX Report API client (real-user metrics)
+    ├── ip-intel.ts      # IP-to-ASN cloud provider detection
     ├── gemini.ts        # Google Gemini AI client
     ├── rate-limit.ts    # API rate limiting & usage tracking
+    ├── keyword-intel.ts # Keyword visibility & search intent analysis
     ├── security-grade.ts# Security header grading
     ├── seo-tools.ts     # SEO audit, readability, links, cookies
     ├── subdomain-enum.ts# DNS subdomain enumeration
@@ -112,7 +120,9 @@ tests/                   # Vitest test suite for utility functions
 Copy `.env.example` to `.env` and configure:
 
 ```
-GEMINI_API_KEY=your_api_key_here
+GEMINI_API_KEY=your_gemini_key_here
+CRUX_API_KEY=your_google_api_key_here
+OPEN_PAGERANK_KEY=your_openpagerank_key_here
 ```
 
 - The Rust engine must be running on `127.0.0.1:8080` for premium port scanning
@@ -128,4 +138,4 @@ npm test          # Run once
 npm run test:watch # Watch mode
 ```
 
-Test coverage includes: security grading, business metrics, SEO analysis, accessibility audits, readability scoring, and Tranco traffic estimation.
+Test coverage includes: security grading, business metrics, SEO analysis, accessibility audits, readability scoring, Tranco traffic estimation, keyword intelligence, and IP-to-provider mapping.

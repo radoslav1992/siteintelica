@@ -1123,6 +1123,77 @@ const schemaData = {
         delay += 0.1;
       }
 
+      // ── CrUX REAL USER METRICS (available for all users when domain is in CrUX) ──
+      if (data.cruxData && data.cruxData.found) {
+        const crux = data.cruxData;
+        const cruxCard = document.createElement('div');
+        cruxCard.className = 'glass-panel category-card animate-fade-in';
+        cruxCard.style.animationDelay = `${delay}s`;
+        cruxCard.style.borderLeft = '3px solid #42a5f5';
+
+        function cruxBar(metric, label, goodThreshold, poorThreshold, unit) {
+          if (!metric) return '';
+          const p75 = metric.p75;
+          const displayVal = unit === 'ms' ? (p75 >= 1000 ? (p75 / 1000).toFixed(1) + 's' : p75 + 'ms') : p75.toFixed(3);
+          const isGood = unit === '' ? p75 <= goodThreshold : p75 <= goodThreshold;
+          const isPoor = unit === '' ? p75 > poorThreshold : p75 > poorThreshold;
+          const color = isGood ? '#00e676' : isPoor ? '#ff4b4b' : '#ffa726';
+          const status = isGood ? 'Good' : isPoor ? 'Poor' : 'Needs Work';
+          return '<div style="margin-bottom:8px;">' +
+            '<div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:3px;">' +
+              '<span>' + label + '</span>' +
+              '<span style="font-weight:700; color:' + color + ';">' + displayVal + ' <span class="badge" style="font-size:0.55rem; background:' + color + '22; color:' + color + ';">' + status + '</span></span>' +
+            '</div>' +
+            '<div style="display:flex; height:6px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,0.06);">' +
+              '<div style="width:' + metric.good + '%; background:#00e676;"></div>' +
+              '<div style="width:' + metric.needsImprovement + '%; background:#ffa726;"></div>' +
+              '<div style="width:' + metric.poor + '%; background:#ff4b4b;"></div>' +
+            '</div>' +
+          '</div>';
+        }
+
+        let metricsHtml = '';
+        metricsHtml += cruxBar(crux.metrics.lcp, 'Largest Contentful Paint (LCP)', 2500, 4000, 'ms');
+        metricsHtml += cruxBar(crux.metrics.cls, 'Cumulative Layout Shift (CLS)', 0.1, 0.25, '');
+        metricsHtml += cruxBar(crux.metrics.inp, 'Interaction to Next Paint (INP)', 200, 500, 'ms');
+        metricsHtml += cruxBar(crux.metrics.fcp, 'First Contentful Paint (FCP)', 1800, 3000, 'ms');
+        metricsHtml += cruxBar(crux.metrics.ttfb, 'Time to First Byte (TTFB)', 800, 1800, 'ms');
+
+        const period = crux.collectionPeriod;
+        const periodText = period ? period.firstDate + ' to ' + period.lastDate : '';
+
+        cruxCard.innerHTML = '<h3 class="category-title">📊 Real User Metrics (CrUX) <span class="badge" style="font-size:0.55rem; margin-left:6px; background:rgba(66,165,245,0.15); color:#42a5f5;">FIELD DATA</span></h3>' +
+          '<div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-bottom:0.75rem;">28-day field data from real Chrome users' + (periodText ? ' (' + periodText + ')' : '') + '</div>' +
+          metricsHtml +
+          '<div style="font-size:0.65rem; color:hsl(var(--text-muted)); margin-top:0.5rem;">P75 values — Google uses these as Core Web Vitals ranking signals.</div>';
+
+        secPerformance.body.appendChild(cruxCard);
+        delay += 0.1;
+      }
+
+      // ── IP INTELLIGENCE CARD ──
+      if (data.ipIntel) {
+        const ipi = data.ipIntel;
+        const ipCard = document.createElement('div');
+        ipCard.className = 'glass-panel category-card animate-fade-in';
+        ipCard.style.animationDelay = `${delay}s`;
+
+        let ipHtml = '<h3 class="category-title">🌍 Infrastructure Intelligence</h3>';
+        const rows = [];
+        if (ipi.cloudProvider) rows.push('<span class="text-secondary">Cloud Provider:</span> <strong style="color:hsl(var(--accent-primary));">' + ipi.cloudProvider.name + '</strong>');
+        if (ipi.cloudProvider) rows.push('<span class="text-secondary">Hosting Tier:</span> <strong>' + ipi.cloudProvider.tier + '</strong>');
+        if (ipi.org) rows.push('<span class="text-secondary">Organization:</span> <strong>' + ipi.org + '</strong>');
+        if (ipi.asName) rows.push('<span class="text-secondary">ASN:</span> <strong>' + ipi.asName + '</strong>');
+        if (ipi.city && ipi.country) rows.push('<span class="text-secondary">Location:</span> <strong>' + ipi.city + ', ' + ipi.country + '</strong>');
+        else if (ipi.country) rows.push('<span class="text-secondary">Country:</span> <strong>' + ipi.country + '</strong>');
+
+        ipHtml += rows.map(function(r) { return '<div style="display:flex; justify-content:space-between; width:100%; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.82rem;">' + r + '</div>'; }).join('');
+
+        ipCard.innerHTML = ipHtml;
+        secNetwork.body.appendChild(ipCard);
+        delay += 0.1;
+      }
+
       // ── BUSINESS INTELLIGENCE CARDS (Premium) ──
       if (data.isPremium && data.businessMetrics) {
         const bm = data.businessMetrics;
@@ -1143,7 +1214,7 @@ const schemaData = {
               <div style="font-size:1.8rem; font-weight:800; color:hsl(var(--accent-primary));">${tmv.low.toLocaleString()} — ${tmv.high.toLocaleString()}</div>
             </div>
             <div style="font-size:0.78rem; color:hsl(var(--text-secondary));">Confidence: <span class="badge">${tmv.confidence}</span></div>
-            <div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">${hasTranco ? 'Based on Tranco global domain ranking (power-law model).' : 'Based on tech stack complexity, sitemap size, and performance signals.'}</div>
+            ${tmv.sources && tmv.sources.length > 0 ? `<div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">Sources: ${tmv.sources.map(s => '<span class="badge" style="font-size:0.6rem; margin-right:3px;">' + s + '</span>').join('')}</div>` : `<div style="font-size:0.7rem; color:hsl(var(--text-secondary)); margin-top:0.5rem;">${hasTranco ? 'Based on Tranco global domain ranking (power-law model).' : 'Based on tech stack complexity, sitemap size, and performance signals.'}</div>`}
           `;
           secBusiness.body.appendChild(card);
           delay += 0.1;
@@ -1266,6 +1337,93 @@ const schemaData = {
           secBusiness.body.appendChild(card);
           delay += 0.1;
         }
+      }
+
+      // ── BACKLINK DATA CARD (Premium) ──
+      if (data.isPremium && data.backlinkData && (data.backlinkData.referringDomains > 0 || data.backlinkData.pageRank != null)) {
+        const bl = data.backlinkData;
+        const blCard = document.createElement('div');
+        blCard.className = 'glass-panel category-card animate-fade-in';
+        blCard.style.animationDelay = `${delay}s`;
+        blCard.style.borderLeft = '3px solid #ab47bc';
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+
+        let blHtml = `<h3 class="category-title">🔗 Backlink Profile ${premBadge}</h3>`;
+        blHtml += `<div style="display:flex; gap:1.5rem; margin-bottom:0.75rem;">`;
+        blHtml += `<div><div style="font-size:1.5rem; font-weight:800; color:hsl(var(--accent-primary));">${bl.referringDomains}</div><div style="font-size:0.72rem; color:hsl(var(--text-secondary));">Referring Domains</div></div>`;
+        if (bl.pageRank != null) {
+          const prColor = bl.pageRank >= 5 ? '#00e676' : bl.pageRank >= 3 ? '#ffa726' : '#ff4b4b';
+          blHtml += `<div><div style="font-size:1.5rem; font-weight:800; color:${prColor};">${bl.pageRank}</div><div style="font-size:0.72rem; color:hsl(var(--text-secondary));">PageRank (0-10)</div></div>`;
+        }
+        blHtml += `</div>`;
+
+        if (bl.sampleLinks && bl.sampleLinks.length > 0) {
+          blHtml += `<div style="font-size:0.78rem; font-weight:600; margin-bottom:0.35rem;">Sample Referring Domains:</div>`;
+          bl.sampleLinks.slice(0, 5).forEach(function(link) {
+            blHtml += `<div style="font-size:0.75rem; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
+              <img src="https://logo.clearbit.com/${link.from}" width="12" height="12" style="border-radius:2px; margin-right:4px; vertical-align:middle;" onerror="this.style.display='none'" />${link.from}</div>`;
+          });
+        }
+
+        blCard.innerHTML = blHtml;
+        secBusiness.body.appendChild(blCard);
+        delay += 0.1;
+      }
+
+      // ── KEYWORD INTELLIGENCE CARD (Premium) ──
+      if (data.isPremium && data.keywordIntel) {
+        const ki = data.keywordIntel;
+        const kiCard = document.createElement('div');
+        kiCard.className = 'glass-panel category-card animate-fade-in';
+        kiCard.style.animationDelay = `${delay}s`;
+        kiCard.style.borderLeft = '3px solid #26c6da';
+        const premBadge = `<span class="badge" style="font-size:0.6rem; margin-left:8px; background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.3);">★ PREMIUM</span>`;
+
+        let kiHtml = `<h3 class="category-title">🔑 Keyword Intelligence ${premBadge}</h3>`;
+
+        // Coverage score
+        const covColor = ki.estimatedKeywordCoverage >= 70 ? '#00e676' : ki.estimatedKeywordCoverage >= 40 ? '#ffa726' : '#ff4b4b';
+        kiHtml += `<div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem;">
+          <div style="width:48px; height:48px; border-radius:10px; background:${covColor}22; border:2px solid ${covColor}; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:800; color:${covColor};">${ki.estimatedKeywordCoverage}</div>
+          <div><div style="font-size:0.85rem; font-weight:600;">Keyword Coverage Score</div><div style="font-size:0.7rem; color:hsl(var(--text-secondary));">How well keywords are distributed across title, meta, headings, body</div></div>
+        </div>`;
+
+        // Search intent
+        if (ki.searchIntentSignals) {
+          const si = ki.searchIntentSignals;
+          kiHtml += `<div style="font-size:0.78rem; font-weight:600; margin-bottom:0.35rem;">Search Intent Signals:</div>`;
+          kiHtml += `<div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-bottom:0.75rem;">`;
+          if (si.informational > 0) kiHtml += `<span class="badge" style="font-size:0.65rem; background:rgba(66,165,245,0.15); color:#42a5f5;">Informational ${si.informational}%</span>`;
+          if (si.transactional > 0) kiHtml += `<span class="badge" style="font-size:0.65rem; background:rgba(0,230,118,0.15); color:#00e676;">Transactional ${si.transactional}%</span>`;
+          if (si.commercial > 0) kiHtml += `<span class="badge" style="font-size:0.65rem; background:rgba(255,167,38,0.15); color:#ffa726;">Commercial ${si.commercial}%</span>`;
+          if (si.navigational > 0) kiHtml += `<span class="badge" style="font-size:0.65rem; background:rgba(171,71,188,0.15); color:#ab47bc;">Navigational ${si.navigational}%</span>`;
+          kiHtml += `</div>`;
+        }
+
+        // Top keywords
+        if (ki.primaryKeywords && ki.primaryKeywords.length > 0) {
+          kiHtml += `<div style="font-size:0.78rem; font-weight:600; margin-bottom:0.35rem;">Top Keywords by Prominence:</div>`;
+          ki.primaryKeywords.slice(0, 10).forEach(function(kw) {
+            const srcBadges = kw.source.map(function(s) { return '<span class="badge" style="font-size:0.5rem; padding:1px 4px;">' + s + '</span>'; }).join(' ');
+            kiHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.75rem;">
+              <span style="font-weight:600;">${kw.keyword}</span>
+              <span>${srcBadges} <span style="color:hsl(var(--text-muted)); font-size:0.65rem;">${kw.frequency}x</span></span>
+            </div>`;
+          });
+        }
+
+        // Content gaps
+        if (ki.contentGaps && ki.contentGaps.length > 0) {
+          kiHtml += `<details style="margin-top:0.75rem;"><summary style="cursor:pointer; font-size:0.78rem; font-weight:600; color:hsl(var(--accent-primary));">Content Gaps (${ki.contentGaps.length})</summary>`;
+          ki.contentGaps.forEach(function(gap) {
+            kiHtml += `<div style="font-size:0.75rem; color:#ffa726; padding:3px 0;">⚠️ ${gap}</div>`;
+          });
+          kiHtml += `</details>`;
+        }
+
+        kiCard.innerHTML = kiHtml;
+        secPerformance.body.appendChild(kiCard);
+        delay += 0.1;
       }
 
       // ── AHREFS-STYLE SEO CARDS (Premium) ──

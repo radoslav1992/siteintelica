@@ -10,6 +10,10 @@ import { calculateBusinessMetrics } from '../../utils/business-intel';
 import { auditAccessibility } from '../../utils/accessibility';
 import { getTrancoRank, rankToTraffic } from '../../utils/tranco';
 import { checkRateLimit, recordUsage } from '../../utils/rate-limit';
+import { fetchCruxData } from '../../utils/crux';
+import { estimateBacklinks } from '../../utils/backlinks';
+import { getIpIntel } from '../../utils/ip-intel';
+import { analyzeKeywordVisibility } from '../../utils/keyword-intel';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -202,6 +206,20 @@ export const POST: APIRoute = async (context) => {
       console.error("Whois Error:", e.message);
     }
 
+    // 4.55 CrUX Real User Metrics (free for all users — indicates real traffic)
+    let cruxData: any = null;
+    try {
+      cruxData = await fetchCruxData(domain);
+    } catch {}
+
+    // 4.56 IP Intelligence & Cloud Provider Detection (from DNS IP)
+    let ipIntel: any = null;
+    if (dnsInfo.ip) {
+      try {
+        ipIntel = await getIpIntel(dnsInfo.ip);
+      } catch {}
+    }
+
     // 4.6 Calculate Tech Stack Diff
     let historicalDiff = null;
     if (previousScan && previousScan.data) {
@@ -249,6 +267,8 @@ export const POST: APIRoute = async (context) => {
     let socialProfiles: any = null;
     let cookieData: any = null;
     let accessibilityAudit: any = null;
+    let backlinkData: any = null;
+    let keywordIntel: any = null;
 
     if (isPremium) {
       try {
@@ -257,8 +277,8 @@ export const POST: APIRoute = async (context) => {
         );
 
         const premiumWork = async () => {
-          // Phase 1: Core scans + fast SEO tools (parallel)
-          const [subs, engineRes, robots, redirects] = await Promise.allSettled([
+          // Phase 1: Core scans + fast SEO tools + backlinks (parallel)
+          const [subs, engineRes, robots, redirects, backlinks] = await Promise.allSettled([
             enumerateSubdomains(domain),
             fetch('http://127.0.0.1:8080/scan/ports', {
               method: 'POST',
@@ -267,7 +287,8 @@ export const POST: APIRoute = async (context) => {
               signal: AbortSignal.timeout(8000)
             }),
             fetchRobotsTxt(domain),
-            followRedirects(url)
+            followRedirects(url),
+            estimateBacklinks(domain)
           ]);
 
           if (subs.status === 'fulfilled') subdomains = subs.value;
@@ -284,6 +305,7 @@ export const POST: APIRoute = async (context) => {
             }
           }
           if (redirects.status === 'fulfilled') redirectChain = redirects.value;
+          if (backlinks.status === 'fulfilled') backlinkData = backlinks.value;
 
           // Phase 2: HTML-based analysis (needs page content)
           try {
@@ -299,6 +321,21 @@ export const POST: APIRoute = async (context) => {
               structuredData = extractStructuredData(html);
               socialProfiles = extractSocialProfiles(html);
               accessibilityAudit = auditAccessibility(html);
+
+              // Keyword visibility analysis
+              const plainText = html.replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<style[\s\S]*?<\/style>/gi, '')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/\s+/g, ' ').trim();
+              const h1s = (html.match(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi) || [])
+                .map(h => h.replace(/<[^>]*>/g, '').trim());
+              keywordIntel = analyzeKeywordVisibility(
+                parsedData?.seo?.title || '',
+                parsedData?.seo?.description || '',
+                h1s,
+                plainText.substring(0, 10000),
+                url
+              );
 
               // Phase 3: Broken link check (slower, batched)
               try {
@@ -350,6 +387,10 @@ export const POST: APIRoute = async (context) => {
       socialProfiles: isPremium ? socialProfiles : null,
       cookieData: isPremium ? cookieData : null,
       accessibilityAudit: isPremium ? accessibilityAudit : null,
+      cruxData: cruxData?.found ? cruxData : null,
+      ipIntel,
+      backlinkData: isPremium ? backlinkData : null,
+      keywordIntel: isPremium ? keywordIntel : null,
       businessMetrics: isPremium ? calculateBusinessMetrics({
         technologies: parsedData?.technologies,
         performance,
@@ -358,7 +399,10 @@ export const POST: APIRoute = async (context) => {
         seoAudit,
         readability,
         trackers: parsedData?.trackers,
-        seo: parsedData?.seo
+        seo: parsedData?.seo,
+        cruxData,
+        backlinkData,
+        ipIntel,
       }, trancoRank) : null
     };
 
