@@ -318,6 +318,70 @@ main.flex-grow {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* ── More Dropdown ── */
+.more-menu-wrap {
+  position: relative;
+}
+
+.more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.more-chevron {
+  transition: transform 0.2s ease;
+}
+
+.more-toggle.active-toggle .more-chevron {
+  transform: rotate(180deg);
+}
+
+.more-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 170px;
+  padding: 0.4rem;
+  background: hsl(var(--bg-secondary));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.more-dropdown.open {
+  display: flex;
+}
+
+.more-link {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: hsl(var(--text-secondary));
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.more-link:hover {
+  color: hsl(var(--text-primary));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.more-link.active {
+  color: hsl(var(--accent-primary));
+  background: hsla(var(--accent-primary), 0.08);
+}
+
 /* ── Mobile Menu ── */
 .mobile-menu-btn {
   display: flex;

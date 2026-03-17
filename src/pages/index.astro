@@ -580,6 +580,7 @@ const schemaData = {
       }
 
       // ─── Create All Sections ───
+      const secHealthScore  = createSection('💯', 'Site Health Score', false, 'PREMIUM');
       const secOverview     = createSection('🔍', 'Tech Stack & Overview');
       const secPerformance  = createSection('⚡', 'Performance, SEO & Content');
       const secNetwork      = createSection('🌐', 'Network, DNS & Infrastructure');
@@ -587,6 +588,9 @@ const schemaData = {
       const secCrawl        = createSection('🕷️', 'Crawlability & Indexing', false, 'PREMIUM');
       const secSecurity     = createSection('🛡️', 'Security, Privacy & Compliance');
       const secSocial       = createSection('📱', 'Social Media & Marketing');
+      const secAdvisory     = createSection('💡', 'Tech Advisories & Recommendations', false, 'PREMIUM');
+      const secBenchmark    = createSection('📈', 'Competitive Benchmark', false, 'PREMIUM');
+      const secSimilar      = createSection('🔗', 'Similar Sites', false, 'PREMIUM');
       const secAI           = createSection('🤖', 'AI-Powered Insights', false, 'PREMIUM');
 
       // 0. Historical Tech Stack Diff Card
@@ -2191,8 +2195,139 @@ const schemaData = {
         delay += 0.1;
       }
 
+      // ─── Health Score Card ───
+      if (data.healthScore) {
+        const hs = data.healthScore;
+        const gradeColor = hs.overall >= 80 ? 'var(--success)' : hs.overall >= 60 ? 'var(--warning)' : 'var(--danger)';
+        const card = document.createElement('div');
+        card.className = 'glass-panel category-card animate-fade-in';
+        card.innerHTML = `
+          <h3 class="category-title">Overall Health Score</h3>
+          <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1rem;">
+            <div style="font-size:3rem; font-weight:900; color:hsl(${gradeColor}); line-height:1;">${hs.overall}</div>
+            <div>
+              <div style="font-size:1.4rem; font-weight:800; color:hsl(${gradeColor});">${hs.grade}</div>
+              <div style="font-size:0.78rem; color:hsl(var(--text-muted));">${hs.comparisonText}</div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            ${hs.breakdown.map((b: any) => `
+              <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem;">
+                <span style="width:90px; color:hsl(var(--text-secondary)); font-weight:600;">${b.category}</span>
+                <div style="flex:1; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                  <div style="width:${b.score}%; height:100%; background:hsl(${b.score >= 70 ? 'var(--success)' : b.score >= 50 ? 'var(--warning)' : 'var(--danger)'}); border-radius:3px;"></div>
+                </div>
+                <span style="font-weight:700; min-width:28px; text-align:right; color:hsl(var(--text-primary));">${b.score}</span>
+              </div>
+            `).join('')}
+          </div>
+          ${hs.prioritizedActions.length > 0 ? `
+            <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.06);">
+              <div style="font-size:0.8rem; font-weight:700; margin-bottom:0.5rem; color:hsl(var(--text-secondary));">Priority Actions</div>
+              ${hs.prioritizedActions.slice(0, 4).map((a: any) => `
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.4rem; font-size:0.78rem;">
+                  <span style="color:hsl(${a.priority === 1 ? 'var(--danger)' : a.priority === 2 ? 'var(--warning)' : 'var(--text-muted)'});">●</span>
+                  <div>
+                    <div style="color:hsl(var(--text-primary));">${a.action}</div>
+                    <div style="color:hsl(var(--text-muted)); font-size:0.7rem;">${a.impact}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        `;
+        secHealthScore.body.appendChild(card);
+      }
+
+      // ─── Tech Advisories ───
+      if (data.techAdvisories && data.techAdvisories.length > 0) {
+        data.techAdvisories.forEach((adv: any) => {
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          const statusColors: Record<string, string> = { 'end-of-life': 'var(--danger)', 'outdated': 'var(--warning)', 'consider-alternatives': '200, 60%, 50%', 'current': 'var(--success)' };
+          const statusLabels: Record<string, string> = { 'end-of-life': '⛔ End of Life', 'outdated': '⚠️ Outdated', 'consider-alternatives': '💡 Consider Alternatives', 'current': '✅ Current' };
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <h3 class="category-title" style="border:none; padding:0; margin:0;">${adv.technology}</h3>
+              <span style="font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:99px; background:hsla(${statusColors[adv.status] || 'var(--text-muted)'}, 0.12); color:hsl(${statusColors[adv.status] || 'var(--text-muted)'});">${statusLabels[adv.status] || adv.status}</span>
+            </div>
+            <p style="font-size:0.8rem; color:hsl(var(--text-secondary)); line-height:1.5; margin-bottom:0.75rem;">${adv.message}</p>
+            ${adv.alternatives.length > 0 ? `
+              <div style="font-size:0.75rem; font-weight:700; color:hsl(var(--text-muted)); margin-bottom:0.4rem;">ALTERNATIVES</div>
+              ${adv.alternatives.map((alt: any) => `
+                <div style="padding:0.5rem; margin-bottom:0.3rem; background:rgba(255,255,255,0.02); border-radius:var(--radius-sm); border-left:2px solid hsla(var(--accent-primary), 0.3);">
+                  <div style="font-size:0.82rem; font-weight:700; color:hsl(var(--text-primary));">${alt.name}</div>
+                  <div style="font-size:0.75rem; color:hsl(var(--text-secondary));">${alt.reason}</div>
+                  <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
+                    <span class="badge" style="font-size:0.65rem;">Migration: ${alt.migrationDifficulty}</span>
+                    <span class="badge" style="font-size:0.65rem;">Cost: ${alt.costChange}</span>
+                  </div>
+                </div>
+              `).join('')}
+            ` : ''}
+          `;
+          secAdvisory.body.appendChild(card);
+        });
+      }
+
+      if (data.stackRecommendations && data.stackRecommendations.length > 0) {
+        const recCard = document.createElement('div');
+        recCard.className = 'glass-panel category-card animate-fade-in';
+        recCard.innerHTML = `
+          <h3 class="category-title">🎯 Stack Recommendations</h3>
+          ${data.stackRecommendations.map((r: string) => `<div style="font-size:0.8rem; color:hsl(var(--text-secondary)); line-height:1.5; padding:0.3rem 0; border-bottom:1px solid rgba(255,255,255,0.03);">→ ${r}</div>`).join('')}
+        `;
+        secAdvisory.body.appendChild(recCard);
+      }
+
+      // ─── Competitive Benchmark ───
+      if (data.benchmark && data.benchmark.metrics.length > 0) {
+        const bm = data.benchmark;
+        const card = document.createElement('div');
+        card.className = 'glass-panel category-card animate-fade-in';
+        card.innerHTML = `
+          <h3 class="category-title">📊 vs ${bm.totalDomainsCompared} Other Sites</h3>
+          <div style="font-size:0.82rem; color:hsl(var(--text-secondary)); margin-bottom:1rem; line-height:1.5;">${bm.summary}</div>
+          <div style="text-align:center; margin-bottom:1rem;">
+            <div style="font-size:2rem; font-weight:900; color:hsl(var(--accent-primary));">Top ${100 - bm.overallPercentile}%</div>
+            <div style="font-size:0.75rem; color:hsl(var(--text-muted));">Overall Percentile Ranking</div>
+          </div>
+          ${bm.metrics.map((m: any) => {
+            const color = m.verdict === 'above' ? 'var(--success)' : m.verdict === 'below' ? 'var(--danger)' : 'var(--warning)';
+            return `
+              <div style="display:flex; align-items:center; gap:0.75rem; padding:0.4rem 0; font-size:0.8rem; border-bottom:1px solid rgba(255,255,255,0.03);">
+                <span style="width:100px; font-weight:600; color:hsl(var(--text-secondary));">${m.metric}</span>
+                <span style="font-weight:800; color:hsl(var(--text-primary)); min-width:30px;">${m.value}</span>
+                <span style="color:hsl(var(--text-muted)); font-size:0.72rem;">avg: ${m.average ?? '—'}</span>
+                <span style="margin-left:auto; font-weight:700; color:hsl(${color}); font-size:0.72rem;">P${m.percentile}</span>
+              </div>
+            `;
+          }).join('')}
+        `;
+        secBenchmark.body.appendChild(card);
+      }
+
+      // ─── Similar Sites ───
+      if (data.similarSites && Array.isArray(data.similarSites) && data.similarSites.length > 0 && data.similarSites[0]?.similarity) {
+        data.similarSites.forEach((site: any) => {
+          const card = document.createElement('div');
+          card.className = 'glass-panel category-card animate-fade-in';
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+              <a href="/report/${site.domain}" style="font-weight:700; font-size:0.9rem; color:hsl(var(--accent-primary)); text-decoration:none;">${site.domain}</a>
+              <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:99px; background:hsla(var(--accent-primary), 0.12); color:hsl(var(--accent-primary));">${site.similarity}% match</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-top:0.3rem;">
+              ${site.sharedTechs.slice(0, 8).map((t: string) => `<span class="badge" style="font-size:0.65rem; background:hsla(var(--success), 0.1); color:hsl(var(--success));">✓ ${t}</span>`).join('')}
+              ${site.uniqueTechs.slice(0, 4).map((t: string) => `<span class="badge" style="font-size:0.65rem;">${t}</span>`).join('')}
+            </div>
+          `;
+          secSimilar.body.appendChild(card);
+        });
+      }
+
       // ─── Append populated sections to results ───
-      const allSections = [secOverview, secPerformance, secNetwork, secBusiness, secCrawl, secSecurity, secSocial, secAI];
+      const allSections = [secHealthScore, secOverview, secPerformance, secNetwork, secBusiness, secCrawl, secSecurity, secAdvisory, secBenchmark, secSimilar, secSocial, secAI];
       allSections.forEach(sec => {
         const count = sec.body.children.length;
         if (count > 0) {

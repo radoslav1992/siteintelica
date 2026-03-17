@@ -11,19 +11,25 @@ const currentPath = Astro.url.pathname;
 
 const isLoggedIn = !!Astro.locals.user;
 
-const navItems = [
+const primaryNav = [
   { href: '/', label: 'Analyze' },
   { href: '/trends', label: 'Trends' },
   { href: '/compare', label: 'Compare' },
   { href: '/leaderboard', label: 'Leaderboard' },
+];
+
+const moreNav = [
   ...(isLoggedIn ? [
     { href: '/monitoring', label: 'Monitor' },
+    { href: '/uptime', label: 'Uptime' },
     { href: '/leads', label: 'Leads' },
   ] : []),
   { href: '/history', label: 'History' },
   { href: '/blog', label: 'Blog' },
   { href: '/knowledge', label: 'Knowledge' },
 ];
+
+const allNav = [...primaryNav, ...moreNav];
 ---
 
 <!DOCTYPE html>
@@ -64,7 +70,7 @@ const navItems = [
           </a>
 
           <div class="nav-links">
-            {navItems.map(item => (
+            {primaryNav.map(item => (
               <a
                 href={item.href}
                 class={`nav-link ${
@@ -76,6 +82,28 @@ const navItems = [
                 {item.label}
               </a>
             ))}
+
+            <div class="more-menu-wrap">
+              <button class="nav-link more-toggle" id="more-toggle" aria-expanded="false">
+                More
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="more-chevron"><polyline points="6 9 12 15 18 9" /></svg>
+              </button>
+              <div class="more-dropdown" id="more-dropdown">
+                {moreNav.map(item => (
+                  <a
+                    href={item.href}
+                    class={`more-link ${
+                      item.href === '/'
+                        ? currentPath === '/' ? 'active' : ''
+                        : currentPath.startsWith(item.href) ? 'active' : ''
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
             <div class="auth-buttons">
               {Astro.locals.user ? (
                 <>
@@ -104,7 +132,7 @@ const navItems = [
         </nav>
 
         <div class="mobile-nav" id="mobile-nav">
-          {navItems.map(item => (
+          {allNav.map(item => (
             <a
               href={item.href}
               class={`nav-link ${
@@ -164,6 +192,24 @@ const navItems = [
           const isOpen = nav.classList.toggle('open');
           if (iconOpen) iconOpen.style.display = isOpen ? 'none' : 'block';
           if (iconClose) iconClose.style.display = isOpen ? 'block' : 'none';
+        });
+      }
+
+      const moreToggle = document.getElementById('more-toggle');
+      const moreDropdown = document.getElementById('more-dropdown');
+      if (moreToggle && moreDropdown) {
+        moreToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const open = moreDropdown.classList.toggle('open');
+          moreToggle.setAttribute('aria-expanded', String(open));
+          moreToggle.classList.toggle('active-toggle', open);
+        });
+        document.addEventListener('click', (e) => {
+          if (!moreToggle.contains(e.target) && !moreDropdown.contains(e.target)) {
+            moreDropdown.classList.remove('open');
+            moreToggle.setAttribute('aria-expanded', 'false');
+            moreToggle.classList.remove('active-toggle');
+          }
         });
       }
     </script>

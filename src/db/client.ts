@@ -17,7 +17,6 @@ db.exec(`
     scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_domain ON scans(domain);
-  CREATE INDEX IF NOT EXISTS idx_scans_user ON scans(user_id);
 
   CREATE TABLE IF NOT EXISTS user (
     id TEXT NOT NULL PRIMARY KEY,
@@ -105,6 +104,20 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_api_usage_user ON api_usage(user_id);
   CREATE INDEX IF NOT EXISTS idx_api_usage_date ON api_usage(created_at);
+
+  CREATE TABLE IF NOT EXISTS shared_reports (
+    id TEXT PRIMARY KEY,
+    scan_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    title TEXT,
+    password_hash TEXT,
+    view_count INTEGER DEFAULT 0,
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_shared_domain ON shared_reports(domain);
 `);
 
 // ── Schema migrations for existing databases ──
@@ -112,13 +125,17 @@ const migrations = [
   'ALTER TABLE user ADD COLUMN webhook_url TEXT',
   'ALTER TABLE user ADD COLUMN plan TEXT DEFAULT \'free\'',
   'ALTER TABLE user ADD COLUMN scan_count_today INTEGER DEFAULT 0',
-  'ALTER TABLE user ADD COLUMN scan_count_reset_at DATETIME DEFAULT CURRENT_TIMESTAMP',
-  'ALTER TABLE user ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP',
+  // SQLite forbids DEFAULT CURRENT_TIMESTAMP in ALTER TABLE — use a fixed fallback
+  'ALTER TABLE user ADD COLUMN scan_count_reset_at DATETIME DEFAULT \'2025-01-01 00:00:00\'',
+  'ALTER TABLE user ADD COLUMN created_at DATETIME DEFAULT \'2025-01-01 00:00:00\'',
   'ALTER TABLE scans ADD COLUMN user_id TEXT',
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch { /* column likely exists */ }
 }
+
+// Post-migration indexes (columns may not exist until migrations run)
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_scans_user ON scans(user_id)'); } catch { }
 
 // ── Rate Limiting ──
 const PLAN_LIMITS: Record<string, number> = {
@@ -489,6 +506,52 @@ export function getTechAggregation(techName: string) {
   } catch {
     return { totalSites: 0, uniqueDomains: 0, topCompanions: [], avgPerformance: null };
   }
+}
+
+// ── Shared Reports ──
+export function createSharedReport(id: string, scanId: number, userId: string, domain: string, title?: string, expiresAt?: string): boolean {
+  try {
+    db.prepare('INSERT INTO shared_reports (id, scan_id, user_id, domain, title, expires_at) VALUES (?, ?, ?, ?, ?, ?)').run(id, scanId, userId, domain, title || null, expiresAt || null);
+    return true;
+  } catch { return false; }
+}
+
+export function getSharedReport(id: string) {
+  try {
+    const report = db.prepare(`
+      SELECT sr.*, s.scan_data, s.scanned_at
+      FROM shared_reports sr
+      JOIN scans s ON s.id = sr.scan_id
+      WHERE sr.id = ? AND (sr.expires_at IS NULL OR sr.expires_at > datetime('now'))
+    `).get(id) as any;
+
+    if (report) {
+      db.prepare('UPDATE shared_reports SET view_count = view_count + 1 WHERE id = ?').run(id);
+      return { ...report, scan_data: JSON.parse(report.scan_data) };
+    }
+    return null;
+  } catch { return null; }
+}
+
+export function getUserSharedReports(userId: string) {
+  try {
+    return db.prepare('SELECT id, domain, title, view_count, expires_at, created_at FROM shared_reports WHERE user_id = ? ORDER BY created_at DESC').all(userId) as any[];
+  } catch { return []; }
+}
+
+export function getScanById(scanId: number) {
+  try {
+    const row = db.prepare('SELECT id, domain, scan_data, scanned_at FROM scans WHERE id = ?').get(scanId) as any;
+    if (row) return { ...row, scan_data: JSON.parse(row.scan_data) };
+    return null;
+  } catch { return null; }
+}
+
+export function getLatestScanId(domain: string): number | null {
+  try {
+    const row = db.prepare('SELECT id FROM scans WHERE domain = ? ORDER BY scanned_at DESC LIMIT 1').get(domain) as any;
+    return row?.id ?? null;
+  } catch { return null; }
 }
 
 export default db;

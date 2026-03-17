@@ -1,0 +1,177 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getMonitoredDomains } from '../db/client';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+
+const monitored = getMonitoredDomains(user.id);
+---
+
+<Layout title="Uptime Monitor">
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Uptime Monitor</h1>
+      <p class="text-secondary text-lg">Track website availability, response times, and SSL certificate health.</p>
+    </header>
+
+    <div class="check-section glass-panel animate-fade-in">
+      <h2 class="section-title">Quick Health Check</h2>
+      <form id="uptimeForm" class="check-form">
+        <input type="text" id="uptimeDomain" placeholder="example.com" class="check-input" required />
+        <button type="submit" class="btn-primary" id="checkBtn">Check Now</button>
+      </form>
+      <div id="quickResult" class="hidden result-card"></div>
+    </div>
+
+    <h2 class="monitored-title">Monitored Domains</h2>
+    <p class="text-secondary text-sm" style="margin-bottom:1.5rem;">Add domains on the <a href="/monitoring" style="color:hsl(var(--accent-primary));">Monitoring</a> page, then track their uptime here.</p>
+
+    <div id="uptimeGrid" class="uptime-grid">
+      {monitored.length > 0 ? monitored.map((d: any) => (
+        <div class="glass-panel uptime-card animate-fade-in" data-domain={d.domain}>
+          <div class="uptime-header">
+            <span class="uptime-domain">{d.domain}</span>
+            <button class="check-btn" data-domain={d.domain}>Check</button>
+          </div>
+          <div class="uptime-details" id={`uptime-${d.domain.replace(/[^a-zA-Z0-9]/g, '_')}`}>
+            <p class="text-muted text-sm">Click "Check" to test now, or data appears after checks run.</p>
+          </div>
+        </div>
+      )) : (
+        <div class="glass-panel empty-state">
+          <p class="text-secondary">No domains monitored yet. <a href="/monitoring" style="color:hsl(var(--accent-primary));">Add domains</a> to track their uptime.</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <style>
+    .page-content { padding-top: 6rem; padding-bottom: 6rem; }
+    .page-header { text-align: center; margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    .check-section { padding: 2rem; margin-bottom: 2rem; }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+    .check-form { display: flex; gap: 0.75rem; }
+    .check-input {
+      flex: 1; padding: 0.85rem 1rem; border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+      color: hsl(var(--text-primary)); font-size: 0.95rem; font-family: var(--font-mono);
+    }
+    .check-input:focus { outline: none; border-color: hsl(var(--accent-primary)); }
+    .monitored-title { font-size: 1.3rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 0.25rem; }
+    .uptime-grid { display: flex; flex-direction: column; gap: 1rem; }
+    .uptime-card { padding: 1.25rem 1.5rem; }
+    .uptime-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .uptime-domain { font-weight: 700; font-size: 1rem; }
+    .check-btn {
+      padding: 0.4rem 1rem; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04); color: hsl(var(--text-secondary)); cursor: pointer;
+      font-size: 0.78rem; font-weight: 600; transition: all 0.15s ease;
+    }
+    .check-btn:hover { background: hsla(var(--accent-primary), 0.1); color: hsl(var(--accent-primary)); border-color: hsla(var(--accent-primary), 0.3); }
+    .result-card {
+      margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    }
+    .empty-state { padding: 2rem; text-align: center; }
+    .status-row {
+      display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem;
+      padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.up { background: hsl(var(--success)); box-shadow: 0 0 6px hsla(var(--success), 0.4); }
+    .status-dot.down { background: hsl(var(--danger)); box-shadow: 0 0 6px hsla(var(--danger), 0.4); }
+    .latency-bar-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; max-width: 120px; }
+    .latency-bar { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+    .ssl-badge {
+      display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 99px; margin-top: 0.5rem;
+    }
+    .ssl-ok { background: hsla(var(--success), 0.1); color: hsl(var(--success)); }
+    .ssl-warn { background: hsla(var(--warning), 0.1); color: hsl(var(--warning)); }
+    .ssl-danger { background: hsla(var(--danger), 0.1); color: hsl(var(--danger)); }
+  </style>
+
+  <script>
+    function renderUptimeResult(container: HTMLElement, data: any) {
+      if (data.statusCode) {
+        const isUp = data.isUp;
+        const latencyColor = data.latencyMs < 500 ? 'var(--success)' : data.latencyMs < 1500 ? 'var(--warning)' : 'var(--danger)';
+        const latencyWidth = Math.min(100, (data.latencyMs / 3000) * 100);
+
+        let sslHtml = '';
+        if (data.sslDaysLeft !== null) {
+          const sslClass = data.sslDaysLeft > 30 ? 'ssl-ok' : data.sslDaysLeft > 7 ? 'ssl-warn' : 'ssl-danger';
+          sslHtml = `<span class="ssl-badge ${sslClass}">🔒 SSL: ${data.sslDaysLeft} days left</span>`;
+        }
+
+        container.innerHTML = `
+          <div class="status-row">
+            <span class="status-dot ${isUp ? 'up' : 'down'}"></span>
+            <span style="font-weight:700; color:hsl(${isUp ? 'var(--success)' : 'var(--danger)'})">${isUp ? 'UP' : 'DOWN'}</span>
+            <span style="color:hsl(var(--text-muted))">HTTP ${data.statusCode}</span>
+            <span style="font-weight:600; color:hsl(var(--text-primary))">${data.latencyMs}ms</span>
+            <div class="latency-bar-bg">
+              <div class="latency-bar" style="width:${latencyWidth}%; background:hsl(${latencyColor})"></div>
+            </div>
+          </div>
+          ${sslHtml}
+          ${data.error ? `<div style="font-size:0.78rem; color:hsl(var(--danger)); margin-top:0.5rem;">${data.error}</div>` : ''}
+        `;
+      } else {
+        container.innerHTML = `<div style="color:hsl(var(--danger)); font-size:0.85rem;">${data.error || 'Check failed'}</div>`;
+      }
+      container.classList.remove('hidden');
+    }
+
+    async function runUptimeCheck(domain: string): Promise<any> {
+      const res = await fetch('/api/uptime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain }),
+      });
+      return res.json();
+    }
+
+    const form = document.getElementById('uptimeForm') as HTMLFormElement;
+    const checkBtn = document.getElementById('checkBtn') as HTMLButtonElement;
+    const quickResult = document.getElementById('quickResult') as HTMLElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const domain = (document.getElementById('uptimeDomain') as HTMLInputElement).value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+      checkBtn.disabled = true;
+      checkBtn.textContent = 'Checking...';
+      quickResult.innerHTML = '<span class="text-muted">Checking...</span>';
+      quickResult.classList.remove('hidden');
+
+      try {
+        const data = await runUptimeCheck(domain);
+        renderUptimeResult(quickResult, data);
+      } catch {
+        quickResult.innerHTML = '<span style="color:hsl(var(--danger))">Network error</span>';
+      }
+      checkBtn.disabled = false;
+      checkBtn.textContent = 'Check Now';
+    });
+
+    document.querySelectorAll('.check-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const domain = (btn as HTMLElement).dataset.domain!;
+        const target = document.getElementById(`uptime-${domain.replace(/[^a-zA-Z0-9]/g, '_')}`) as HTMLElement;
+        (btn as HTMLButtonElement).disabled = true;
+        btn.textContent = '...';
+        try {
+          const data = await runUptimeCheck(domain);
+          if (target) renderUptimeResult(target, data);
+        } catch {
+          if (target) target.innerHTML = '<span style="color:hsl(var(--danger))">Check failed</span>';
+        }
+        (btn as HTMLButtonElement).disabled = false;
+        btn.textContent = 'Check';
+      });
+    });
+  </script>
+</Layout>

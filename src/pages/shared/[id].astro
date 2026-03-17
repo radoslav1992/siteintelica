@@ -1,0 +1,220 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getSharedReport } from '../../db/client';
+
+const { id } = Astro.params;
+const report = id ? getSharedReport(id) : null;
+
+if (!report) {
+  return new Response('Report not found or expired', { status: 404 });
+}
+
+const data = report.scan_data;
+const domain = report.domain;
+const scannedAt = new Date(report.scanned_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const viewCount = report.view_count;
+const title = report.title || `Intelligence Report: ${domain}`;
+
+const technologies = data.technologies || [];
+const healthScore = data.healthScore;
+const securityGrade = data.securityGrade;
+const performance = data.performance;
+const benchmark = data.benchmark;
+---
+
+<Layout title={title}>
+  <div class="container page-content">
+    <header class="report-header animate-fade-in">
+      <div class="report-branding">
+        <span class="brand-mark">SiteIntelica</span>
+        <span class="brand-divider">|</span>
+        <span class="brand-type">Intelligence Report</span>
+      </div>
+      <h1 class="report-title">{domain}</h1>
+      <p class="report-subtitle">{title !== `Intelligence Report: ${domain}` ? title : ''}</p>
+      <div class="report-meta">
+        <span>Scanned {scannedAt}</span>
+        <span class="meta-sep">·</span>
+        <span>{viewCount} view{viewCount !== 1 ? 's' : ''}</span>
+        <span class="meta-sep">·</span>
+        <span>{technologies.length} technologies detected</span>
+      </div>
+    </header>
+
+    <!-- Scoreboard -->
+    <div class="score-grid animate-fade-in" style="animation-delay:0.05s;">
+      {healthScore && (
+        <div class="score-card score-primary">
+          <div class="score-number">{healthScore.overall}</div>
+          <div class="score-grade">{healthScore.grade}</div>
+          <div class="score-label">Health Score</div>
+        </div>
+      )}
+      {performance?.score != null && (
+        <div class="score-card">
+          <div class="score-number">{performance.score}</div>
+          <div class="score-label">Performance</div>
+        </div>
+      )}
+      {performance?.seo != null && (
+        <div class="score-card">
+          <div class="score-number">{performance.seo}</div>
+          <div class="score-label">SEO</div>
+        </div>
+      )}
+      {securityGrade && (
+        <div class="score-card">
+          <div class="score-number">{securityGrade.grade || securityGrade.score}</div>
+          <div class="score-label">Security</div>
+        </div>
+      )}
+      {performance?.accessibility != null && (
+        <div class="score-card">
+          <div class="score-number">{performance.accessibility}</div>
+          <div class="score-label">Accessibility</div>
+        </div>
+      )}
+    </div>
+
+    <!-- Health Score Breakdown -->
+    {healthScore && (
+      <div class="glass-panel section animate-fade-in" style="animation-delay:0.1s;">
+        <h2 class="section-title">Health Score Breakdown</h2>
+        <p class="text-secondary text-sm" style="margin-bottom:1rem;">{healthScore.comparisonText}</p>
+        <div class="breakdown-grid">
+          {healthScore.breakdown.map((b: any) => (
+            <div class="breakdown-item">
+              <div class="breakdown-header">
+                <span class="breakdown-category">{b.category}</span>
+                <span class={`breakdown-score status-${b.status}`}>{b.score}</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style={`width:${b.score}%`} data-status={b.status}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {healthScore.prioritizedActions.length > 0 && (
+          <div class="actions-list">
+            <h3 class="actions-title">Priority Actions</h3>
+            {healthScore.prioritizedActions.map((a: any) => (
+              <div class="action-item">
+                <span class={`action-dot priority-${a.priority}`}></span>
+                <div>
+                  <div class="action-text">{a.action}</div>
+                  <div class="action-impact">{a.impact}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    <!-- Tech Stack -->
+    <div class="glass-panel section animate-fade-in" style="animation-delay:0.15s;">
+      <h2 class="section-title">Technology Stack ({technologies.length})</h2>
+      <div class="tech-grid">
+        {technologies.map((tech: any) => (
+          <div class="tech-item">
+            <div class="tech-name">{tech.name}</div>
+            {tech.version && <div class="tech-version">v{tech.version}</div>}
+            <div class="tech-cats">{(tech.categories || []).map((c: any) => c.name || c).join(', ')}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Competitive Benchmark -->
+    {benchmark && benchmark.metrics.length > 0 && (
+      <div class="glass-panel section animate-fade-in" style="animation-delay:0.2s;">
+        <h2 class="section-title">Competitive Benchmark</h2>
+        <p class="text-secondary text-sm" style="margin-bottom:1rem;">{benchmark.summary}</p>
+        <div class="benchmark-list">
+          {benchmark.metrics.map((m: any) => (
+            <div class="benchmark-item">
+              <span class="bm-metric">{m.metric}</span>
+              <span class="bm-value">{m.value}</span>
+              <span class="bm-avg">avg: {m.average ?? '—'}</span>
+              <span class={`bm-verdict verdict-${m.verdict}`}>P{m.percentile}</span>
+            </div>
+          ))}
+        </div>
+        <div class="bm-overall">Overall: Top {100 - benchmark.overallPercentile}% of {benchmark.totalDomainsCompared} scanned sites</div>
+      </div>
+    )}
+
+    <footer class="report-footer animate-fade-in" style="animation-delay:0.25s;">
+      <p>Generated by <a href="/" style="color:hsl(var(--accent-primary)); font-weight:700;">SiteIntelica</a> — Website Intelligence Platform</p>
+      <p class="text-muted text-sm">Want your own report? <a href="/" style="color:hsl(var(--accent-primary));">Analyze any website for free</a></p>
+    </footer>
+  </div>
+
+  <style>
+    .page-content { padding-top: 5rem; padding-bottom: 5rem; max-width: 800px; }
+    .report-header { text-align: center; margin-bottom: 2.5rem; }
+    .report-branding { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; }
+    .brand-mark { font-size: 0.85rem; font-weight: 800; color: hsl(var(--accent-primary)); letter-spacing: 0.05em; text-transform: uppercase; }
+    .brand-divider { color: hsl(var(--text-muted)); }
+    .brand-type { font-size: 0.8rem; color: hsl(var(--text-muted)); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+    .report-title { font-size: 2.5rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.25rem; }
+    .report-subtitle { font-size: 1rem; color: hsl(var(--text-secondary)); margin-bottom: 0.75rem; }
+    .report-meta { display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.8rem; color: hsl(var(--text-muted)); flex-wrap: wrap; }
+    .meta-sep { opacity: 0.3; }
+
+    .score-grid { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; justify-content: center; }
+    .score-card { text-align: center; padding: 1.25rem 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-lg); min-width: 100px; }
+    .score-primary { border-color: hsla(var(--accent-primary), 0.3); background: hsla(var(--accent-primary), 0.05); }
+    .score-number { font-size: 2rem; font-weight: 900; line-height: 1; color: hsl(var(--text-primary)); }
+    .score-grade { font-size: 1.2rem; font-weight: 800; color: hsl(var(--accent-primary)); }
+    .score-label { font-size: 0.72rem; color: hsl(var(--text-muted)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.25rem; }
+
+    .section { padding: 1.75rem; margin-bottom: 1.5rem; }
+    .section-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; }
+
+    .breakdown-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+    .breakdown-item { }
+    .breakdown-header { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem; }
+    .breakdown-category { font-weight: 600; color: hsl(var(--text-secondary)); }
+    .breakdown-score { font-weight: 800; }
+    .status-excellent { color: hsl(var(--success)); }
+    .status-good { color: hsl(var(--success)); }
+    .status-fair { color: hsl(var(--warning)); }
+    .status-poor { color: hsl(var(--danger)); }
+    .status-critical { color: hsl(var(--danger)); }
+    .progress-bar { height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .progress-fill[data-status="excellent"], .progress-fill[data-status="good"] { background: hsl(var(--success)); }
+    .progress-fill[data-status="fair"] { background: hsl(var(--warning)); }
+    .progress-fill[data-status="poor"], .progress-fill[data-status="critical"] { background: hsl(var(--danger)); }
+
+    .actions-list { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
+    .actions-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .action-item { display: flex; gap: 0.6rem; margin-bottom: 0.5rem; font-size: 0.8rem; }
+    .action-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 0.35rem; }
+    .priority-1 { background: hsl(var(--danger)); }
+    .priority-2 { background: hsl(var(--warning)); }
+    .priority-3 { background: hsl(var(--text-muted)); }
+    .action-text { color: hsl(var(--text-primary)); line-height: 1.4; }
+    .action-impact { color: hsl(var(--text-muted)); font-size: 0.72rem; }
+
+    .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.6rem; }
+    .tech-item { padding: 0.6rem 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: var(--radius-sm); }
+    .tech-name { font-weight: 700; font-size: 0.85rem; }
+    .tech-version { font-size: 0.7rem; color: hsl(var(--accent-primary)); font-family: var(--font-mono); }
+    .tech-cats { font-size: 0.68rem; color: hsl(var(--text-muted)); margin-top: 0.15rem; }
+
+    .benchmark-list { display: flex; flex-direction: column; gap: 0.4rem; }
+    .benchmark-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .bm-metric { width: 100px; font-weight: 600; color: hsl(var(--text-secondary)); }
+    .bm-value { font-weight: 800; min-width: 30px; }
+    .bm-avg { color: hsl(var(--text-muted)); font-size: 0.72rem; }
+    .bm-verdict { margin-left: auto; font-weight: 700; font-size: 0.75rem; }
+    .verdict-above { color: hsl(var(--success)); }
+    .verdict-average { color: hsl(var(--warning)); }
+    .verdict-below { color: hsl(var(--danger)); }
+    .bm-overall { text-align: center; margin-top: 1rem; font-weight: 700; font-size: 0.85rem; color: hsl(var(--accent-primary)); }
+
+    .report-footer { text-align: center; padding: 2rem 0; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; color: hsl(var(--text-secondary)); }
+  </style>
+</Layout>

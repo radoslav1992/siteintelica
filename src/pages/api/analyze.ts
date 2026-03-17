@@ -17,6 +17,10 @@ import { getIpIntel } from '../../utils/ip-intel';
 import { analyzeKeywordVisibility } from '../../utils/keyword-intel';
 import { runDeepSecurityScan } from '../../utils/deep-security';
 import { runAdvancedSEOAudit } from '../../utils/advanced-seo';
+import { calculateHealthScore } from '../../utils/health-score';
+import { getAdvisories, getStackRecommendations } from '../../utils/tech-alternatives';
+import { findSimilarSites } from '../../utils/similar-sites';
+import { generateBenchmark } from '../../utils/competitive-benchmark';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -424,10 +428,21 @@ export const POST: APIRoute = async (context) => {
         cruxData,
         backlinkData,
         ipIntel,
-      }, trancoRank) : null
+      }, trancoRank) : null,
     };
 
-    // 5. Persist to History Database & record API usage
+    // 6. Premium-only post-processing (uses enhancedData as input)
+    if (isPremium) {
+      const techs = parsedData?.technologies || [];
+
+      (enhancedData as any).healthScore = calculateHealthScore(enhancedData);
+      (enhancedData as any).techAdvisories = getAdvisories(techs);
+      (enhancedData as any).stackRecommendations = getStackRecommendations(techs);
+      (enhancedData as any).similarSites = findSimilarSites(domain, techs.map((t: any) => t.name), 8);
+      (enhancedData as any).benchmark = generateBenchmark(domain, enhancedData);
+    }
+
+    // 7. Persist to History Database & record API usage
     const userId = context.locals.user?.id ?? undefined;
     saveScan(domain, enhancedData, userId);
     if (userId) incrementScanCount(userId);

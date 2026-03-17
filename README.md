@@ -56,6 +56,51 @@ Advanced tech stack analyzer and competitor intelligence platform. X-Ray any web
 - **Ad Revenue Estimator** — Based on detected ad networks and traffic estimates
 - **Hosting Cost Estimate** — Cloud/hosting tier detection with traffic-scaled cost ranges
 
+#### Site Health Score
+- **Composite 0-100 Score** — Weighted combination of performance, security, SEO, accessibility, content quality, and infrastructure
+- **Letter Grade** — A+ through F grading with percentile comparison text
+- **Category Breakdown** — Per-category scores with visual progress bars
+- **Prioritized Action Plan** — Up to 8 ranked recommendations with impact assessments
+- **Comparison Text** — "Top 5% of websites" / "Below average" context
+
+#### Technology Alternatives Advisor
+- **Per-Tech Advisory** — Status (current, outdated, end-of-life) for 20+ technologies
+- **Migration Suggestions** — 2-3 modern alternatives per technology with migration difficulty ratings
+- **Cost Comparison** — Whether the alternative is cheaper, similar, or more expensive
+- **Stack Recommendations** — Holistic suggestions (add CDN, add error tracking, remove duplicate libraries)
+
+#### Competitive Benchmark
+- **Percentile Ranking** — Compare performance, SEO, accessibility, security, and tech stack size against all scanned domains
+- **Per-Metric Comparison** — Your score vs. database average with above/average/below verdicts
+- **Overall Percentile** — Combined percentile with contextual summary text
+
+#### Similar Sites
+- **Jaccard Similarity** — Find domains with the most overlapping tech stacks
+- **Shared & Unique Technologies** — See what you have in common and what's different
+- **Discovery** — Identify competitors using similar technology patterns
+
+#### Uptime Monitor (`/uptime`)
+- **HTTP Health Checks** — Status code, response latency, up/down detection
+- **SSL Certificate Monitoring** — Days-left tracking with color-coded warnings
+- **Latency History** — Per-check latency stored in database with trend tracking
+- **Quick Check** — Test any domain instantly from the uptime page
+- **Monitored Domain Integration** — One-click checks for all monitored domains
+
+#### Change Detection Engine
+- **Automated Monitoring** — Background checks for all watched domains
+- **Tech Stack Diffs** — Automatic detection of added/removed technologies
+- **Downtime Alerts** — Notifications when sites go offline
+- **SSL Expiry Warnings** — Alerts when certificates expire within 14 days
+- **Webhook Delivery** — POST payloads to configured webhook URLs when changes detected
+- **Cron-Compatible** — `/api/check-domains` endpoint for scheduled execution
+
+#### Shareable Reports (`/shared/[id]`)
+- **Public Report Links** — Generate shareable URLs for any scanned domain
+- **Branded Reports** — SiteIntelica-branded public pages with health score, tech stack, and benchmarks
+- **View Tracking** — Count how many times each shared report is viewed
+- **Expiration** — Optional expiry date for time-limited sharing
+- **Management API** — Create, list, and manage shared reports via `/api/share`
+
 #### Domain Monitoring (`/monitoring`)
 - **Watchlist Management** — Add up to 25 competitor domains with custom labels
 - **Flexible Check Intervals** — Hourly, daily, or weekly monitoring
@@ -135,22 +180,28 @@ src/
 │   │   ├── analyze.ts   # Main scan endpoint (deep security + advanced SEO + rate limiting)
 │   │   ├── bulk-analyze.ts # Real batch scanning with sequential processing
 │   │   ├── monitor.ts   # Watchlist CRUD (add/remove/list)
-│   │   ├── leads.ts     # Technology search & lead generation
-│   │   ├── notifications.ts # Notification management
-│   │   ├── export.ts    # CSV/JSON data export
-│   │   ├── history/     # Per-domain scan timeline
-│   │   ├── badge/       # SVG badge generator
-│   │   ├── ai/          # AI endpoints (summary, email, upgrades, seo-audit, competitor-gap)
-│   │   └── user/        # Webhook config, usage stats
-│   ├── dashboard.astro  # Premium command center with stats, actions, API keys
-│   ├── monitoring.astro # Domain monitoring management
-│   ├── leads.astro      # Technology search & lead generation
-│   ├── notifications.astro # Notification center
-│   ├── blog/            # Blog pages
-│   ├── history/         # Scan timeline per domain
-│   ├── tech/            # Technology deep dive pages
-│   ├── report/          # Public domain reports
-│   └── ...              # Other pages (trends, compare, leaderboard, etc.)
+    │   │   ├── uptime.ts    # Uptime health checks with latency + SSL
+    │   │   ├── check-domains.ts # Change detection trigger (cron-compatible)
+    │   │   ├── similar.ts   # Similar sites finder by tech overlap
+    │   │   ├── share.ts     # Shareable report management
+    │   │   ├── leads.ts     # Technology search & lead generation
+    │   │   ├── notifications.ts # Notification management
+    │   │   ├── export.ts    # CSV/JSON data export
+    │   │   ├── history/     # Per-domain scan timeline
+    │   │   ├── badge/       # SVG badge generator
+    │   │   ├── ai/          # AI endpoints (summary, email, upgrades, seo-audit, competitor-gap)
+    │   │   └── user/        # Webhook config, usage stats
+    │   ├── dashboard.astro  # Premium command center with stats, actions, API keys
+    │   ├── monitoring.astro # Domain monitoring management
+    │   ├── uptime.astro     # Uptime monitor with SSL tracking
+    │   ├── leads.astro      # Technology search & lead generation
+    │   ├── notifications.astro # Notification center
+    │   ├── shared/[id].astro # Public shareable report viewer
+    │   ├── blog/            # Blog pages
+    │   ├── history/         # Scan timeline per domain
+    │   ├── tech/            # Technology deep dive pages
+    │   ├── report/          # Public domain reports
+    │   └── ...              # Other pages (trends, compare, leaderboard, etc.)
 ├── scripts/             # Client-side scripts
 ├── styles/global.css    # Design system (CSS variables, components)
 └── utils/               # Business logic
@@ -159,15 +210,21 @@ src/
     ├── backlinks.ts     # CommonCrawl + Open PageRank backlink estimation
     ├── business-intel.ts# Multi-source traffic, cost, carbon, authority calculators
     ├── crux.ts          # Chrome UX Report API client
+    ├── change-detector.ts # Automated change detection + webhook delivery
+    ├── competitive-benchmark.ts # Percentile ranking against database
     ├── deep-security.ts # CVE lookup, CSP analysis, mixed content, 3rd-party risk scoring
+    ├── health-score.ts  # Composite 0-100 site health score with grading
     ├── ip-intel.ts      # IP-to-ASN cloud provider detection
     ├── gemini.ts        # Google Gemini AI client
     ├── keyword-intel.ts # Keyword visibility & search intent analysis
     ├── rate-limit.ts    # API rate limiting & usage tracking
     ├── security-grade.ts# Security header grading
     ├── seo-tools.ts     # SEO audit, readability, links, cookies
+    ├── similar-sites.ts # Jaccard similarity tech stack matching
     ├── subdomain-enum.ts# DNS subdomain enumeration
+    ├── tech-alternatives.ts # Technology advisory + migration suggestions
     ├── tranco.ts        # Tranco domain ranking lookup
+    ├── uptime.ts        # HTTP health checks + SSL expiry monitoring
     └── wayback.ts       # Wayback Machine CDX API client
 
 engine/                  # Rust port scanner service (Axum on :8080)
@@ -186,6 +243,8 @@ tests/                   # Vitest test suite for utility functions
 | `audit_log` | All user actions logged with metadata and IP |
 | `bulk_jobs` | Batch scan job tracking with status and results |
 | `api_usage` | Per-request API usage logging with latency and status |
+| `shared_reports` | Shareable report links with view tracking and optional expiry |
+| `uptime_checks` | HTTP health check history with latency and SSL cert data |
 
 ## Environment
 
