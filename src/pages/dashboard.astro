@@ -1,85 +1,170 @@
 ---
 import Layout from '../layouts/Layout.astro';
-
-import db from '../db/client';
+import db, { getApiUsageStats, getMonitoredDomains, getUnreadNotificationCount, getUserScans, getBulkJobs } from '../db/client';
 
 const user = Astro.locals.user;
-if (!user) {
-	return Astro.redirect("/login");
-}
+if (!user) return Astro.redirect('/login');
 
-const stmt = db.prepare('SELECT webhook_url FROM user WHERE id = ?');
-const userData = stmt.get(user.id) as { webhook_url: string | null } | undefined;
+const stmt = db.prepare('SELECT webhook_url, plan, created_at FROM user WHERE id = ?');
+const userData = stmt.get(user.id) as { webhook_url: string | null; plan: string; created_at: string } | undefined;
 const webhookUrl = userData?.webhook_url || '';
+const plan = userData?.plan || 'free';
+const memberSince = userData?.created_at ? new Date(userData.created_at).toLocaleDateString() : 'N/A';
+
+const apiUsage = getApiUsageStats(user.id);
+const monitored = getMonitoredDomains(user.id);
+const unreadNotifs = getUnreadNotificationCount(user.id);
+const recentScans = getUserScans(user.id, 5);
+const bulkJobs = getBulkJobs(user.id);
 ---
 
 <Layout title="Dashboard">
   <div class="container page-content">
     <header class="page-header">
-      <h1 class="text-gradient">Welcome Back</h1>
-      <p class="text-secondary text-lg">Manage your API keys and run bulk analyses.</p>
-      <div class="user-badge">
+      <h1 class="text-gradient">Dashboard</h1>
+      <p class="text-secondary text-lg">Your premium intelligence command center.</p>
+      <div class="user-meta">
         <span class="badge font-mono">{user.email}</span>
+        <span class="plan-badge">{plan.toUpperCase()}</span>
+        <span class="text-muted text-sm">Member since {memberSince}</span>
       </div>
     </header>
 
+    <!-- Quick Stats -->
+    <div class="stats-grid animate-fade-in">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value">{apiUsage.today}</div>
+        <div class="stat-label">Scans Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📡</div>
+        <div class="stat-value">{monitored.length}</div>
+        <div class="stat-label">Monitored</div>
+      </div>
+      <a href="/notifications" class="stat-card stat-card-link">
+        <div class="stat-icon">🔔</div>
+        <div class="stat-value">{unreadNotifs}<span class="stat-small"> unread</span></div>
+        <div class="stat-label">Notifications</div>
+      </a>
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-value">{apiUsage.thisMonth}</div>
+        <div class="stat-label">This Month</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions animate-fade-in" style="animation-delay: 0.05s;">
+      <a href="/monitoring" class="action-btn">📡 Monitor Competitors</a>
+      <a href="/leads" class="action-btn">🎯 Search Leads</a>
+      <a href="/bulk" class="action-btn">📁 Bulk Analysis</a>
+      <a href="/notifications" class="action-btn">🔔 Notifications {unreadNotifs > 0 ? `(${unreadNotifs})` : ''}</a>
+      <a href={`/api/export?format=csv&type=scans`} class="action-btn">📥 Export Scans CSV</a>
+    </div>
+
     <div class="cards-wrapper">
       <!-- API Access Card -->
-      <div class="glass-panel card animate-fade-in card-accent-primary">
-        <h2 class="card-title">Developer API Access</h2>
-        <p class="text-secondary text-sm mb-6">Use your unique API key to programmatically scan URLs and retrieve JSON intelligence reports.</p>
-        
-        <label class="field-label">Your Active API Key</label>
+      <div class="glass-panel card animate-fade-in card-accent-primary" style="animation-delay: 0.08s;">
+        <h2 class="card-title">🔑 Developer API Access</h2>
+        <p class="text-secondary text-sm mb-6">Use your API key to programmatically scan URLs and retrieve JSON intelligence reports.</p>
+
+        <label class="field-label">Your API Key</label>
         <div class="api-key-row">
-          <!-- @ts-ignore -->
           <input type="text" readonly value={user.apiKey} class="mono-input" id="apiKeyInput" />
           <button class="btn-primary copy-btn" id="copyBtn" onclick="navigator.clipboard.writeText(document.getElementById('apiKeyInput').value); this.innerText = 'Copied!'; setTimeout(() => this.innerText = 'Copy', 2000);">Copy</button>
         </div>
 
         <div class="code-block">
-          <p class="text-sm font-semibold mb-2 text-secondary">Example cURL Request:</p>
+          <p class="text-sm font-semibold mb-2 text-secondary">cURL Example:</p>
           <code>curl -X POST https://siteintelica.com/api/analyze \
-  -H "Authorization: Bearer <span class="text-accent-primary">YOUR_API_KEY</span>" \
+  -H "Authorization: Bearer <span class="text-accent-primary">YOUR_KEY</span>" \
   -H "Content-Type: application/json" \
   -d '&#123;"url":"https://stripe.com"&#125;'</code>
+        </div>
+
+        <div class="usage-bar-wrap">
+          <div class="usage-label">
+            <span>API Usage Today</span>
+            <span class="text-muted">{apiUsage.today} requests</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill" style={`width: ${Math.min(100, (apiUsage.today / 200) * 100)}%`}></div></div>
         </div>
       </div>
 
       <!-- Webhook Integration Card -->
-      <div class="glass-panel card animate-fade-in card-accent-secondary" style="animation-delay:0.05s;">
-        <h2 class="card-title">Webhook Integration</h2>
-        <p class="text-secondary text-sm mb-6">Configure a webhook URL to receive real-time payloads when bulk scans finish or a competitor's stack changes.</p>
-        
+      <div class="glass-panel card animate-fade-in card-accent-secondary" style="animation-delay: 0.1s;">
+        <h2 class="card-title">🔗 Webhook Integration</h2>
+        <p class="text-secondary text-sm mb-6">Receive real-time payloads when bulk scans finish or a monitored domain's stack changes.</p>
+
         <form id="webhookForm" class="api-key-row">
-          <!-- @ts-ignore -->
-          <input type="url" name="webhookUrl" placeholder="https://your-server.com/api/webhooks/siteintelica" value={webhookUrl} class="mono-input" id="webhookInput" required />
+          <input type="url" name="webhookUrl" placeholder="https://your-server.com/webhooks/siteintelica" value={webhookUrl} class="mono-input" id="webhookInput" required />
           <button type="submit" class="btn-primary copy-btn" id="saveWebhookBtn">Save</button>
         </form>
         <p id="webhookStatus" class="text-sm text-secondary hidden" style="margin-top:0.75rem;"></p>
       </div>
 
-      <!-- API Usage Card -->
-      <div class="glass-panel card animate-fade-in" style="animation-delay:0.1s; border-top: 3px solid hsl(var(--accent-warm));">
-        <h2 class="card-title">API Usage</h2>
-        <p class="text-secondary text-sm mb-6">Track your API consumption over the last 30 days.</p>
-        <div id="usageStats" style="min-height:100px;">
-          <p class="text-secondary text-sm">Loading usage data...</p>
-        </div>
-        <div id="usageChart" style="margin-top:1rem;">
-          <canvas id="usageCanvas" height="120"></canvas>
-        </div>
+      <!-- Recent Scans -->
+      <div class="glass-panel card animate-fade-in" style="animation-delay: 0.12s;">
+        <h2 class="card-title">🕵️ Recent Scans</h2>
+        {recentScans.length > 0 ? (
+          <div class="recent-list">
+            {recentScans.map((s: any) => (
+              <a href={`/report/${s.domain}`} class="recent-item">
+                <span class="recent-domain">{s.domain}</span>
+                <span class="recent-date">{new Date(s.scanned_at).toLocaleDateString()}</span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="text-secondary text-sm">No scans yet. Analyze a website to get started.</p>
+        )}
+        <a href="/history" class="view-all-link">View all history →</a>
       </div>
 
-      <!-- Bulk Scanner -->
-      <div class="glass-panel card animate-fade-in card-dashed" style="animation-delay:0.15s;">
+      <!-- Monitored Domains Summary -->
+      <div class="glass-panel card animate-fade-in" style="animation-delay: 0.14s;">
+        <h2 class="card-title">📡 Monitored Domains</h2>
+        {monitored.length > 0 ? (
+          <div class="recent-list">
+            {monitored.slice(0, 5).map((d: any) => (
+              <div class="recent-item">
+                <span class="recent-domain">{d.domain}</span>
+                <span class="recent-date">{d.check_interval}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p class="text-secondary text-sm">No domains monitored yet.</p>
+        )}
+        <a href="/monitoring" class="view-all-link">Manage monitoring →</a>
+      </div>
+
+      <!-- Bulk Jobs -->
+      {bulkJobs.length > 0 && (
+        <div class="glass-panel card animate-fade-in" style="animation-delay: 0.16s;">
+          <h2 class="card-title">📁 Recent Bulk Jobs</h2>
+          <div class="recent-list">
+            {bulkJobs.slice(0, 5).map((j: any) => (
+              <div class="recent-item">
+                <span class="recent-domain">Job #{j.id} — {j.total_urls} URLs</span>
+                <span class={`status-badge status-${j.status}`}>{j.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Bulk Scanner Upload -->
+      <div class="glass-panel card animate-fade-in card-dashed" style="animation-delay: 0.18s;">
         <div class="bulk-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(var(--accent-primary))">
             <path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 15h6" /><path d="M12 12v6" />
           </svg>
         </div>
         <h2 class="card-title text-center">Bulk Domain Scanner</h2>
-        <p class="text-secondary text-sm text-center mb-6">Upload a CSV/TXT containing up to 50 URLs. Our engine will output a combined JSON intelligence report.</p>
-        
+        <p class="text-secondary text-sm text-center mb-6">Upload CSV/TXT with up to 50 URLs for batch analysis.</p>
+
         <form id="bulkForm" class="bulk-form">
           <input type="file" id="csvFile" name="file" accept=".csv, .txt" class="file-input" required />
           <button type="submit" class="btn-primary" id="bulkBtn" style="width:100%; padding:0.85rem;">Run Bulk Analysis</button>
@@ -90,145 +175,98 @@ const webhookUrl = userData?.webhook_url || '';
   </div>
 
   <style>
-    .page-content {
-      padding-top: 6rem;
-      padding-bottom: 6rem;
+    .page-content { padding-top: 6rem; padding-bottom: 6rem; }
+    .page-header { text-align: center; margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+
+    .user-meta { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .plan-badge {
+      padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+      background: hsla(var(--accent-warm), 0.12); color: hsl(var(--accent-warm));
     }
 
-    .page-header {
-      text-align: center;
-      margin-bottom: 3rem;
+    /* Stats Grid */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem; max-width: 800px; margin: 0 auto 1.5rem;
     }
-
-    .page-header h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 0.5rem;
+    .stat-card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md); padding: 1.25rem; text-align: center; transition: all 0.2s;
     }
+    .stat-card:hover { border-color: rgba(255,255,255,0.12); }
+    .stat-card-link { text-decoration: none; cursor: pointer; }
+    .stat-card-link:hover { border-color: hsl(var(--accent-primary)); }
+    .stat-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em; color: hsl(var(--text-primary)); }
+    .stat-small { font-size: 0.65rem; font-weight: 500; color: hsl(var(--text-muted)); }
+    .stat-label { font-size: 0.75rem; color: hsl(var(--text-muted)); margin-top: 0.25rem; }
 
-    .user-badge {
-      display: flex;
-      justify-content: center;
-      margin-top: 1rem;
+    /* Quick Actions */
+    .quick-actions {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
+      max-width: 800px; margin: 0 auto 2rem;
     }
-
-    .cards-wrapper {
-      max-width: 800px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    .action-btn {
+      padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      color: hsl(var(--text-secondary)); text-decoration: none; transition: all 0.2s; white-space: nowrap;
     }
+    .action-btn:hover { background: hsla(var(--accent-primary), 0.08); border-color: hsla(var(--accent-primary), 0.2); color: hsl(var(--accent-primary)); }
 
-    .card {
-      padding: 2rem;
-    }
+    /* Cards */
+    .cards-wrapper { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    .card { padding: 1.75rem; }
+    .card-accent-primary { border-top: 3px solid hsl(var(--accent-primary)); }
+    .card-accent-secondary { border-top: 3px solid hsl(var(--accent-secondary)); }
+    .card-dashed { border: 1px dashed rgba(255,255,255,0.15); text-align: center; }
+    .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; }
 
-    .card-accent-primary {
-      border-top: 3px solid hsl(var(--accent-primary));
-    }
-
-    .card-accent-secondary {
-      border-top: 3px solid hsl(var(--accent-secondary));
-    }
-
-    .card-dashed {
-      border: 1px dashed rgba(255, 255, 255, 0.15);
-      text-align: center;
-    }
-
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    .field-label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: hsl(var(--text-secondary));
-    }
-
-    .api-key-row {
-      display: flex;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-    }
-
+    .field-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: hsl(var(--text-secondary)); }
+    .api-key-row { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; }
     .mono-input {
-      flex-grow: 1;
-      padding: 0.75rem 1rem;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm);
-      color: hsl(var(--text-primary));
-      outline: none;
-      transition: border-color var(--transition-smooth);
+      flex-grow: 1; padding: 0.75rem 1rem; font-family: var(--font-mono); font-size: 0.85rem;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);
+      color: hsl(var(--text-primary)); outline: none; transition: border-color 0.2s;
     }
-
-    .mono-input:focus {
-      border-color: hsl(var(--accent-primary));
-    }
-
-    .copy-btn {
-      flex-shrink: 0;
-      padding: 0.75rem 1.25rem;
-    }
+    .mono-input:focus { border-color: hsl(var(--accent-primary)); }
+    .copy-btn { flex-shrink: 0; padding: 0.75rem 1.25rem; }
 
     .code-block {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      overflow-x: auto;
+      background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); padding: 1rem; overflow-x: auto; margin-bottom: 1.25rem;
     }
+    .code-block code { font-size: 0.78rem; font-family: var(--font-mono); color: hsl(var(--text-secondary)); white-space: pre; line-height: 1.6; }
 
-    .code-block code {
-      font-size: 0.78rem;
-      font-family: var(--font-mono);
-      color: hsl(var(--text-secondary));
-      white-space: pre;
-      line-height: 1.6;
-    }
+    .usage-bar-wrap { margin-top: 0.5rem; }
+    .usage-label { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.4rem; color: hsl(var(--text-secondary)); }
+    .usage-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .usage-fill { height: 100%; background: hsl(var(--accent-primary)); border-radius: 3px; transition: width 0.3s; }
 
-    .bulk-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: hsla(var(--accent-primary), 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1rem;
+    /* Recent Lists */
+    .recent-list { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+    .recent-item {
+      display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.65rem;
+      border-radius: var(--radius-sm); transition: background 0.2s; text-decoration: none;
     }
+    .recent-item:hover { background: rgba(255,255,255,0.04); }
+    .recent-domain { font-size: 0.85rem; font-weight: 600; color: hsl(var(--text-primary)); }
+    .recent-date { font-size: 0.72rem; color: hsl(var(--text-muted)); }
+    .view-all-link { font-size: 0.8rem; color: hsl(var(--accent-primary)); text-decoration: none; font-weight: 600; }
+    .view-all-link:hover { text-decoration: underline; }
 
-    .bulk-form {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
+    .status-badge { padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.68rem; font-weight: 700; }
+    .status-complete { background: hsla(var(--success), 0.12); color: hsl(var(--success)); }
+    .status-processing { background: hsla(var(--warning), 0.12); color: hsl(var(--warning)); }
+    .status-pending { background: rgba(255,255,255,0.08); color: hsl(var(--text-muted)); }
 
-    .file-input {
-      padding: 0.6rem;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm);
-      color: hsl(var(--text-primary));
-      font-family: var(--font-sans);
-      font-size: 0.85rem;
-    }
+    .bulk-icon { width: 48px; height: 48px; border-radius: 50%; background: hsla(var(--accent-primary), 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .bulk-form { width: 100%; max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+    .file-input { padding: 0.6rem; width: 100%; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); color: hsl(var(--text-primary)); font-family: var(--font-sans); font-size: 0.85rem; }
 
     @media (max-width: 640px) {
       .api-key-row { flex-direction: column; }
       .page-header h1 { font-size: 2rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 
@@ -241,9 +279,9 @@ const webhookUrl = userData?.webhook_url || '';
       bulkForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         bulkBtn.disabled = true;
-        bulkBtn.innerText = 'Analyzing Queue...';
+        bulkBtn.innerText = 'Analyzing...';
         bulkStatus.classList.remove('hidden');
-        bulkStatus.innerText = 'Processing in the background... Please wait.';
+        bulkStatus.innerText = 'Processing domains... This may take a minute.';
         bulkStatus.style.color = 'hsl(var(--text-secondary))';
 
         const formData = new FormData(bulkForm);
@@ -255,10 +293,10 @@ const webhookUrl = userData?.webhook_url || '';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `siteintelica_bulk_report_${Date.now()}.json`;
+            a.download = `siteintelica_bulk_${Date.now()}.json`;
             a.click();
             window.URL.revokeObjectURL(url);
-            bulkStatus.innerText = `Analysis complete! ${data.bulk_processed} domains processed.`;
+            bulkStatus.innerText = `Complete! ${data.successCount}/${data.totalProcessed} domains scanned successfully.`;
             bulkStatus.style.color = 'hsl(var(--success))';
           } else {
             const err = await res.json();
@@ -266,79 +304,13 @@ const webhookUrl = userData?.webhook_url || '';
             bulkStatus.style.color = 'hsl(var(--danger))';
           }
         } catch {
-          bulkStatus.innerText = 'Network error occurred during bulk pass.';
+          bulkStatus.innerText = 'Network error occurred.';
           bulkStatus.style.color = 'hsl(var(--danger))';
         }
         bulkBtn.disabled = false;
         bulkBtn.innerText = 'Run Bulk Analysis';
       });
     }
-
-    // Load API usage stats
-    (async () => {
-      const statsEl = document.getElementById('usageStats');
-      const canvasEl = document.getElementById('usageCanvas') as HTMLCanvasElement;
-      try {
-        const res = await fetch('/api/user/usage');
-        if (!res.ok) throw new Error('Failed to load');
-        const data = await res.json();
-
-        const totalCalls = data.totalUsage || 0;
-        const endpoints = data.endpointBreakdown || {};
-        const endpointList = Object.entries(endpoints)
-          .sort(([, a]: any, [, b]: any) => b - a)
-          .slice(0, 5)
-          .map(([ep, count]) => `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.78rem;"><span class="text-secondary">${ep}</span><strong>${count}</strong></div>`)
-          .join('');
-
-        statsEl!.innerHTML = `
-          <div style="display:flex; gap:1.5rem; margin-bottom:1rem;">
-            <div><div style="font-size:1.5rem; font-weight:800; color:hsl(var(--accent-primary));">${totalCalls}</div><div style="font-size:0.75rem; color:hsl(var(--text-secondary));">Total API calls</div></div>
-          </div>
-          ${endpointList ? `<div style="margin-top:0.5rem;">${endpointList}</div>` : '<p class="text-secondary text-sm">No usage recorded yet.</p>'}
-        `;
-
-        // Draw usage chart
-        const daily = data.dailyTotals || {};
-        const days = Object.keys(daily).sort();
-        if (days.length > 1 && canvasEl) {
-          const ctx = canvasEl.getContext('2d')!;
-          const dpr = window.devicePixelRatio || 1;
-          const rect = canvasEl.parentElement!.getBoundingClientRect();
-          canvasEl.width = rect.width * dpr;
-          canvasEl.height = 120 * dpr;
-          canvasEl.style.width = rect.width + 'px';
-          canvasEl.style.height = '120px';
-          ctx.scale(dpr, dpr);
-
-          const W = rect.width, H = 120;
-          const pad = { top: 10, right: 10, bottom: 20, left: 30 };
-          const vals = days.map(d => daily[d]);
-          const maxVal = Math.max(...vals, 1);
-
-          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-          ctx.lineWidth = 1;
-          for (let v = 0; v <= maxVal; v += Math.ceil(maxVal / 4)) {
-            const y = pad.top + (H - pad.top - pad.bottom) * (1 - v / maxVal);
-            ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-            ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '9px Inter'; ctx.textAlign = 'right';
-            ctx.fillText(v.toString(), pad.left - 4, y + 3);
-          }
-
-          ctx.beginPath();
-          ctx.strokeStyle = 'hsl(165, 80%, 48%)';
-          ctx.lineWidth = 2;
-          vals.forEach((v, i) => {
-            const x = pad.left + (i / (vals.length - 1)) * (W - pad.left - pad.right);
-            const y = pad.top + (H - pad.top - pad.bottom) * (1 - v / maxVal);
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          });
-          ctx.stroke();
-        }
-      } catch {
-        statsEl!.innerHTML = '<p class="text-secondary text-sm">Unable to load usage data.</p>';
-      }
-    })();
 
     const webhookForm = document.getElementById('webhookForm') as HTMLFormElement;
     const saveWebhookBtn = document.getElementById('saveWebhookBtn') as HTMLButtonElement;
@@ -357,7 +329,7 @@ const webhookUrl = userData?.webhook_url || '';
             headers: { 'Content-Type': 'application/json' }
           });
           if (res.ok) {
-            webhookStatus.innerText = 'Webhook URL saved successfully!';
+            webhookStatus.innerText = 'Webhook URL saved!';
             webhookStatus.style.color = 'hsl(var(--success))';
           } else {
             const err = await res.json();

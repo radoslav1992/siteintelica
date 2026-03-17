@@ -1,0 +1,280 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+---
+
+<Layout title="Lead Generation" description="Search domains by technology stack — find prospects using specific tools and platforms.">
+  <div class="container page-content">
+    <header class="page-header">
+      <div class="header-badge">
+        <span class="badge-icon">🎯</span>
+        <span class="badge-label">PREMIUM</span>
+      </div>
+      <h1 class="text-gradient">Lead Generation</h1>
+      <p class="text-secondary text-lg">Search our database by technology stack to find leads. Filter by technologies they use — or don't use.</p>
+    </header>
+
+    <!-- Search Panel -->
+    <div class="glass-panel search-panel animate-fade-in">
+      <form id="searchForm">
+        <div class="search-group">
+          <label class="field-label">Must use (include):</label>
+          <input type="text" id="includeTechs" placeholder="e.g. WordPress, WooCommerce, Stripe" class="form-input" />
+          <p class="field-hint">Comma-separated. Domains must use ALL listed technologies.</p>
+        </div>
+        <div class="search-group">
+          <label class="field-label">Must NOT use (exclude):</label>
+          <input type="text" id="excludeTechs" placeholder="e.g. Cloudflare, React" class="form-input" />
+          <p class="field-hint">Comma-separated. Domains using these will be filtered out.</p>
+        </div>
+        <div class="search-actions">
+          <button type="submit" class="btn-primary" id="searchBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search Leads
+          </button>
+          <button type="button" class="btn-secondary" id="exportBtn" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsSection" class="results-section hidden">
+      <div class="results-header">
+        <h2 id="resultCount" class="result-count"></h2>
+        <div id="techStats" class="tech-stats"></div>
+      </div>
+      <div id="resultsList" class="results-list"></div>
+    </div>
+
+    <!-- Technology Explorer -->
+    <div class="glass-panel tech-explorer animate-fade-in" style="animation-delay: 0.05s;">
+      <h2 class="section-title">📊 Technology Adoption</h2>
+      <p class="text-secondary text-sm mb-4">Most detected technologies across all scanned domains.</p>
+      <div id="techGrid" class="tech-grid">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .page-content { padding-top: 6rem; padding-bottom: 6rem; }
+    .page-header { text-align: center; margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+
+    .header-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.85rem; border-radius: 99px; margin-bottom: 1rem;
+      background: hsla(var(--accent-warm), 0.1); border: 1px solid hsla(var(--accent-warm), 0.2);
+      font-size: 0.72rem; font-weight: 700; color: hsl(var(--accent-warm)); letter-spacing: 0.05em;
+    }
+    .badge-icon { font-size: 0.9rem; }
+
+    .search-panel { max-width: 700px; margin: 0 auto 2rem; padding: 1.5rem; }
+    .search-group { margin-bottom: 1.25rem; }
+    .field-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: hsl(var(--text-secondary)); }
+    .field-hint { font-size: 0.72rem; color: hsl(var(--text-muted)); margin-top: 0.3rem; }
+    .form-input {
+      width: 100%; padding: 0.7rem 1rem;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); color: hsl(var(--text-primary));
+      font-family: var(--font-sans); font-size: 0.9rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: hsl(var(--accent-primary)); }
+
+    .search-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    #searchBtn, #exportBtn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.25rem; }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm); color: hsl(var(--text-secondary));
+      font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: hsl(var(--text-primary)); }
+    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .results-section { max-width: 900px; margin: 0 auto 2rem; }
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+    .result-count { font-size: 1.1rem; font-weight: 700; }
+
+    .results-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    :global(.lead-card) {
+      display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1.25rem;
+      border-left: 3px solid transparent; transition: all 0.2s ease;
+    }
+    :global(.lead-card:hover) { border-left-color: hsl(var(--accent-primary)); transform: translateX(2px); }
+    :global(.lead-domain) { font-weight: 700; font-size: 0.9rem; color: hsl(var(--text-primary)); min-width: 160px; }
+    :global(.lead-techs) { flex: 1; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    :global(.lead-tech-tag) {
+      padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.68rem; font-weight: 600;
+      background: rgba(255,255,255,0.06); color: hsl(var(--text-secondary));
+    }
+    :global(.lead-tech-tag.highlight) {
+      background: hsla(var(--accent-primary), 0.12); color: hsl(var(--accent-primary));
+    }
+    :global(.lead-date) { font-size: 0.72rem; color: hsl(var(--text-muted)); flex-shrink: 0; }
+
+    .tech-explorer { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .tech-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    :global(.tech-stat) {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.85rem;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
+    }
+    :global(.tech-stat:hover) { border-color: hsla(var(--accent-primary), 0.3); background: hsla(var(--accent-primary), 0.05); }
+    :global(.tech-stat-name) { font-size: 0.8rem; font-weight: 600; color: hsl(var(--text-primary)); }
+    :global(.tech-stat-count) { font-size: 0.72rem; color: hsl(var(--text-muted)); }
+    :global(.tech-stat-bar) {
+      width: 40px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;
+    }
+    :global(.tech-stat-fill) { height: 100%; background: hsl(var(--accent-primary)); border-radius: 2px; }
+
+    .spinner-wrap { display: flex; justify-content: center; padding: 2rem; width: 100%; }
+    .spinner {
+      width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.08);
+      border-top-color: hsl(var(--accent-primary)); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 640px) {
+      .page-header h1 { font-size: 2rem; }
+      :global(.lead-card) { flex-direction: column; align-items: flex-start; }
+      :global(.lead-domain) { min-width: auto; }
+    }
+  </style>
+
+  <script>
+    let lastResults: any[] = [];
+    let lastQuery: any = {};
+
+    const searchForm = document.getElementById('searchForm') as HTMLFormElement;
+    const searchBtn = document.getElementById('searchBtn') as HTMLButtonElement;
+    const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
+    const resultsSection = document.getElementById('resultsSection')!;
+    const resultCount = document.getElementById('resultCount')!;
+    const resultsList = document.getElementById('resultsList')!;
+    const techGrid = document.getElementById('techGrid')!;
+
+    // Load technology stats
+    async function loadTechStats() {
+      try {
+        const res = await fetch('/api/leads');
+        if (!res.ok) return;
+        const data = await res.json();
+        const techs = data.technologies || [];
+
+        if (techs.length === 0) {
+          techGrid.innerHTML = '<p class="text-secondary text-sm">No scan data yet. Analyze some domains first.</p>';
+          return;
+        }
+
+        const maxCount = techs[0]?.count || 1;
+        techGrid.innerHTML = techs.slice(0, 40).map((t: any) => `
+          <div class="tech-stat" data-tech="${t.name}">
+            <span class="tech-stat-name">${t.name}</span>
+            <span class="tech-stat-count">${t.count}</span>
+            <div class="tech-stat-bar"><div class="tech-stat-fill" style="width: ${Math.max(5, (t.count / maxCount) * 100)}%"></div></div>
+          </div>
+        `).join('');
+
+        techGrid.querySelectorAll('.tech-stat').forEach(el => {
+          el.addEventListener('click', () => {
+            const tech = (el as HTMLElement).dataset.tech;
+            const includeInput = document.getElementById('includeTechs') as HTMLInputElement;
+            const current = includeInput.value.split(',').map(s => s.trim()).filter(Boolean);
+            if (!current.includes(tech!)) {
+              current.push(tech!);
+              includeInput.value = current.join(', ');
+            }
+          });
+        });
+      } catch {
+        techGrid.innerHTML = '<p class="text-danger text-sm">Failed to load technology stats.</p>';
+      }
+    }
+
+    searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const include = (document.getElementById('includeTechs') as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean);
+      const exclude = (document.getElementById('excludeTechs') as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean);
+
+      if (include.length === 0) { alert('Enter at least one technology to search for.'); return; }
+
+      searchBtn.disabled = true;
+      searchBtn.textContent = 'Searching...';
+      lastQuery = { include, exclude };
+
+      try {
+        const res = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ include, exclude, limit: 200 }),
+        });
+
+        if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+
+        const data = await res.json();
+        lastResults = data.results;
+        renderResults(data.results, include);
+        exportBtn.disabled = false;
+      } catch {
+        alert('Search failed. Please try again.');
+      }
+
+      searchBtn.disabled = false;
+      searchBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search Leads`;
+    });
+
+    function renderResults(results: any[], highlight: string[]) {
+      resultsSection.classList.remove('hidden');
+      resultCount.textContent = `${results.length} domain${results.length !== 1 ? 's' : ''} found`;
+      resultsList.innerHTML = '';
+
+      if (results.length === 0) {
+        resultsList.innerHTML = '<p class="text-secondary" style="text-align:center; padding:2rem;">No domains match this criteria. Try broader search terms.</p>';
+        return;
+      }
+
+      results.forEach((r: any) => {
+        const card = document.createElement('div');
+        card.className = 'glass-panel lead-card';
+
+        const techTags = r.techs.slice(0, 12).map((t: string) => {
+          const isHL = highlight.some(h => t.toLowerCase().includes(h.toLowerCase()));
+          return `<span class="lead-tech-tag ${isHL ? 'highlight' : ''}">${t}</span>`;
+        }).join('');
+
+        const date = new Date(r.scanned_at).toLocaleDateString();
+        card.innerHTML = `
+          <a href="/report/${r.domain}" class="lead-domain">${r.domain}</a>
+          <div class="lead-techs">${techTags}${r.techs.length > 12 ? `<span class="lead-tech-tag">+${r.techs.length - 12}</span>` : ''}</div>
+          <span class="lead-date">${date}</span>
+        `;
+        resultsList.appendChild(card);
+      });
+    }
+
+    exportBtn.addEventListener('click', () => {
+      if (lastResults.length === 0) return;
+      const headers = ['domain', 'technologies', 'scanned_at'];
+      const rows = lastResults.map(r => [r.domain, r.techs.join('; '), r.scanned_at]);
+      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `siteintelica_leads_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    loadTechStats();
+  </script>
+</Layout>

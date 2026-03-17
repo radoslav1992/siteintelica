@@ -9,16 +9,19 @@ interface Props {
 const { title, description = "X-Ray any website to reveal its tech stack and how it makes money." } = Astro.props;
 const currentPath = Astro.url.pathname;
 
+const isLoggedIn = !!Astro.locals.user;
+
 const navItems = [
-  { href: '/', label: 'Spy Tool' },
+  { href: '/', label: 'Analyze' },
   { href: '/trends', label: 'Trends' },
-  { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/compare', label: 'Compare' },
-  { href: '/monitor', label: 'Monitor' },
+  { href: '/leaderboard', label: 'Leaderboard' },
+  ...(isLoggedIn ? [
+    { href: '/monitoring', label: 'Monitor' },
+    { href: '/leads', label: 'Leads' },
+  ] : []),
   { href: '/history', label: 'History' },
-  { href: '/bulk', label: 'Bulk' },
   { href: '/blog', label: 'Blog' },
-  { href: '/about', label: 'About' },
   { href: '/knowledge', label: 'Knowledge' },
 ];
 ---

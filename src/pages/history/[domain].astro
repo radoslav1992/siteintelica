@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getScanHistory } from '../../db/client';
+import { getDomainHistory as getScanHistory } from '../../db/client';
 import { calculateSecurityGrade } from '../../utils/security-grade';
 
 export const prerender = false;

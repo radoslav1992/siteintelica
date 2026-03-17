@@ -1,0 +1,249 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+---
+
+<Layout title="Domain Monitoring" description="Monitor competitor websites for tech stack changes, security regressions, and performance shifts.">
+  <div class="container page-content">
+    <header class="page-header">
+      <div class="header-badge">
+        <span class="badge-icon">📡</span>
+        <span class="badge-label">PREMIUM</span>
+      </div>
+      <h1 class="text-gradient">Domain Monitoring</h1>
+      <p class="text-secondary text-lg">Track competitor websites and get notified when their tech stack, security, or performance changes.</p>
+    </header>
+
+    <!-- Add Domain Form -->
+    <div class="glass-panel add-form-panel animate-fade-in">
+      <form id="addDomainForm" class="add-form">
+        <div class="form-row">
+          <input type="url" id="monitorUrl" placeholder="https://competitor.com" class="form-input" required />
+          <input type="text" id="monitorLabel" placeholder="Label (optional)" class="form-input form-input-sm" />
+          <select id="monitorInterval" class="form-select">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="hourly">Hourly</option>
+          </select>
+          <button type="submit" class="btn-primary" id="addBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Domains Grid -->
+    <div id="domainsGrid" class="domains-grid">
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p class="text-secondary">Loading monitored domains...</p>
+      </div>
+    </div>
+
+    <div id="emptyState" class="empty-state hidden">
+      <div class="empty-icon">📡</div>
+      <h3>No domains monitored yet</h3>
+      <p class="text-secondary">Add a competitor's URL above to start tracking changes.</p>
+    </div>
+  </div>
+
+  <style>
+    .page-content { padding-top: 6rem; padding-bottom: 6rem; }
+    .page-header { text-align: center; margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+
+    .header-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.85rem; border-radius: 99px; margin-bottom: 1rem;
+      background: hsla(var(--accent-warm), 0.1); border: 1px solid hsla(var(--accent-warm), 0.2);
+      font-size: 0.72rem; font-weight: 700; color: hsl(var(--accent-warm)); letter-spacing: 0.05em;
+    }
+    .badge-icon { font-size: 0.9rem; }
+
+    .add-form-panel { padding: 1.25rem; max-width: 900px; margin: 0 auto 2rem; }
+    .form-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .form-input {
+      flex: 1; min-width: 180px; padding: 0.7rem 1rem;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); color: hsl(var(--text-primary));
+      font-family: var(--font-sans); font-size: 0.9rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: hsl(var(--accent-primary)); }
+    .form-input-sm { max-width: 160px; }
+    .form-select {
+      padding: 0.7rem 0.75rem; background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);
+      color: hsl(var(--text-primary)); font-size: 0.85rem; outline: none;
+    }
+    #addBtn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.25rem; flex-shrink: 0; }
+
+    .domains-grid {
+      max-width: 900px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+
+    :global(.domain-card) {
+      display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem;
+      border-left: 3px solid transparent; transition: all 0.2s ease;
+    }
+    :global(.domain-card:hover) {
+      border-left-color: hsl(var(--accent-primary)); transform: translateX(2px);
+    }
+    :global(.domain-info) { flex: 1; min-width: 0; }
+    :global(.domain-name) { font-weight: 700; font-size: 0.95rem; color: hsl(var(--text-primary)); }
+    :global(.domain-label) { font-size: 0.75rem; color: hsl(var(--text-muted)); margin-left: 0.5rem; }
+    :global(.domain-meta) {
+      display: flex; gap: 1rem; margin-top: 0.35rem; font-size: 0.78rem; color: hsl(var(--text-secondary));
+      flex-wrap: wrap;
+    }
+    :global(.meta-item) { display: flex; align-items: center; gap: 0.3rem; }
+
+    :global(.domain-stats) {
+      display: flex; gap: 0.75rem; align-items: center; flex-shrink: 0;
+    }
+    :global(.stat-badge) {
+      padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.72rem; font-weight: 700;
+    }
+    :global(.stat-badge.grade-a) { background: hsla(var(--success), 0.12); color: hsl(var(--success)); }
+    :global(.stat-badge.grade-b) { background: hsla(160, 60%, 45%, 0.12); color: hsl(160, 60%, 55%); }
+    :global(.stat-badge.grade-c) { background: hsla(var(--warning), 0.12); color: hsl(var(--warning)); }
+    :global(.stat-badge.grade-d) { background: hsla(var(--danger), 0.12); color: hsl(var(--danger)); }
+    :global(.stat-badge.grade-f) { background: hsla(var(--danger), 0.15); color: hsl(var(--danger)); }
+
+    :global(.remove-btn) {
+      background: none; border: none; cursor: pointer; padding: 0.4rem;
+      color: hsl(var(--text-muted)); transition: color 0.2s; border-radius: var(--radius-sm);
+    }
+    :global(.remove-btn:hover) { color: hsl(var(--danger)); background: hsla(var(--danger), 0.1); }
+
+    .loading-state, .empty-state {
+      text-align: center; padding: 3rem 1rem;
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-state h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.08);
+      border-top-color: hsl(var(--accent-primary)); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 640px) {
+      .form-row { flex-direction: column; }
+      .form-input-sm { max-width: none; }
+      .page-header h1 { font-size: 2rem; }
+    }
+  </style>
+
+  <script>
+    const domainsGrid = document.getElementById('domainsGrid')!;
+    const loadingState = document.getElementById('loadingState')!;
+    const emptyState = document.getElementById('emptyState')!;
+    const addForm = document.getElementById('addDomainForm') as HTMLFormElement;
+    const addBtn = document.getElementById('addBtn') as HTMLButtonElement;
+
+    async function loadDomains() {
+      try {
+        const res = await fetch('/api/monitor');
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        renderDomains(data.domains);
+      } catch {
+        loadingState.innerHTML = '<p class="text-danger">Failed to load monitored domains.</p>';
+      }
+    }
+
+    function renderDomains(domains: any[]) {
+      loadingState.remove();
+
+      if (domains.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      domainsGrid.innerHTML = '';
+
+      domains.forEach((d: any) => {
+        const card = document.createElement('div');
+        card.className = 'glass-panel domain-card animate-fade-in';
+
+        const gradeClass = d.securityGrade ? `grade-${d.securityGrade.toLowerCase()}` : '';
+        const lastChecked = d.lastChecked ? new Date(d.lastChecked).toLocaleDateString() : 'Never';
+
+        card.innerHTML = `
+          <div class="domain-info">
+            <div>
+              <span class="domain-name">${d.domain}</span>
+              ${d.label ? `<span class="domain-label">${d.label}</span>` : ''}
+            </div>
+            <div class="domain-meta">
+              <span class="meta-item">🔄 ${d.interval}</span>
+              <span class="meta-item">📅 Last: ${lastChecked}</span>
+              <span class="meta-item">🔧 ${d.techCount} techs</span>
+            </div>
+          </div>
+          <div class="domain-stats">
+            ${d.securityGrade ? `<span class="stat-badge ${gradeClass}">🛡 ${d.securityGrade}</span>` : ''}
+            ${d.performanceScore ? `<span class="stat-badge" style="background: rgba(255,255,255,0.06); color: hsl(var(--text-secondary));">⚡ ${d.performanceScore}</span>` : ''}
+          </div>
+          <button class="remove-btn" data-domain="${d.domain}" title="Stop monitoring">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        `;
+
+        card.querySelector('.remove-btn')?.addEventListener('click', async (e) => {
+          const btn = e.currentTarget as HTMLElement;
+          const domain = btn.dataset.domain;
+          await fetch('/api/monitor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove', domain }),
+          });
+          card.remove();
+          if (domainsGrid.children.length === 0) emptyState.classList.remove('hidden');
+        });
+
+        domainsGrid.appendChild(card);
+      });
+    }
+
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const urlInput = document.getElementById('monitorUrl') as HTMLInputElement;
+      const labelInput = document.getElementById('monitorLabel') as HTMLInputElement;
+      const intervalSelect = document.getElementById('monitorInterval') as HTMLSelectElement;
+
+      addBtn.disabled = true;
+      addBtn.textContent = 'Adding...';
+
+      try {
+        const res = await fetch('/api/monitor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urlInput.value, label: labelInput.value, interval: intervalSelect.value }),
+        });
+        if (res.ok) {
+          urlInput.value = '';
+          labelInput.value = '';
+          await loadDomains();
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to add domain');
+        }
+      } catch {
+        alert('Network error');
+      }
+
+      addBtn.disabled = false;
+      addBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add`;
+    });
+
+    loadDomains();
+  </script>
+</Layout>

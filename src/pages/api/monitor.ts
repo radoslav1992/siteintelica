@@ -1,112 +1,124 @@
 import type { APIRoute } from 'astro';
-import db from '../../db/client';
+import { addMonitoredDomain, removeMonitoredDomain, getMonitoredDomains, logAudit, createNotification } from '../../db/client';
 
 export const prerender = false;
-
-try { db.exec(`
-  CREATE TABLE IF NOT EXISTS watched_domains (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL,
-    domain TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_checked DATETIME,
-    FOREIGN KEY (user_id) REFERENCES user(id),
-    UNIQUE(user_id, domain)
-  );
-`); } catch {}
-
-export const GET: APIRoute = async (context) => {
-  const user = context.locals.user;
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Authentication required.' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  try {
-    const stmt = db.prepare(`
-      SELECT wd.id, wd.domain, wd.created_at, wd.last_checked,
-             s.scan_data, s.scanned_at as last_scan_date
-      FROM watched_domains wd
-      LEFT JOIN scans s ON s.domain = wd.domain
-        AND s.scanned_at = (SELECT MAX(s2.scanned_at) FROM scans s2 WHERE s2.domain = wd.domain)
-      WHERE wd.user_id = ?
-      ORDER BY wd.created_at DESC
-    `);
-    const watchlist = stmt.all(user.id) as any[];
-
-    const result = watchlist.map(w => {
-      let techCount = 0;
-      let securityGrade = '?';
-      let perfScore = null;
-      if (w.scan_data) {
-        try {
-          const data = JSON.parse(w.scan_data);
-          techCount = (data.technologies || []).length;
-          securityGrade = data.securityGrade?.grade || '?';
-          perfScore = data.performance?.score ?? null;
-        } catch {}
-      }
-      return {
-        id: w.id,
-        domain: w.domain,
-        createdAt: w.created_at,
-        lastChecked: w.last_checked,
-        lastScanDate: w.last_scan_date,
-        techCount,
-        securityGrade,
-        perfScore,
-      };
-    });
-
-    return new Response(JSON.stringify({ watchlist: result }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json' }
-    });
-  }
-};
 
 export const POST: APIRoute = async (context) => {
   const user = context.locals.user;
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Authentication required.' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' }
+    return new Response(JSON.stringify({ error: 'Unauthorized. Premium account required for Domain Monitoring.' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
     });
   }
 
   try {
-    const { domain, action } = await context.request.json();
-    if (!domain) {
-      return new Response(JSON.stringify({ error: 'Domain is required.' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const data = await context.request.json();
+    const { action } = data;
 
     if (action === 'remove') {
-      db.prepare('DELETE FROM watched_domains WHERE user_id = ? AND domain = ?').run(user.id, domain);
-      return new Response(JSON.stringify({ success: true, message: 'Removed from watchlist.' }), {
-        headers: { 'Content-Type': 'application/json' }
+      const domain = data.domain;
+      if (!domain) {
+        return new Response(JSON.stringify({ error: 'Domain required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      removeMonitoredDomain(user.id, domain);
+      logAudit(user.id, 'monitor_remove', domain);
+      return new Response(JSON.stringify({ success: true, message: `Stopped monitoring ${domain}` }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const existing = db.prepare('SELECT COUNT(*) as count FROM watched_domains WHERE user_id = ?').get(user.id) as { count: number };
-    if (existing.count >= 20) {
-      return new Response(JSON.stringify({ error: 'Maximum 20 watched domains allowed.' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
+    // Default: add domain
+    const url = data.url;
+    if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+      return new Response(JSON.stringify({ error: 'Invalid URL provided. Please include http:// or https://' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    db.prepare('INSERT OR IGNORE INTO watched_domains (user_id, domain) VALUES (?, ?)').run(user.id, domain);
+    const domain = new URL(url).hostname;
+    const label = data.label || null;
+    const interval = data.interval || 'daily';
 
-    return new Response(JSON.stringify({ success: true, message: `Now watching ${domain}.` }), {
-      headers: { 'Content-Type': 'application/json' }
+    if (!['hourly', 'daily', 'weekly'].includes(interval)) {
+      return new Response(JSON.stringify({ error: 'Invalid interval. Use: hourly, daily, or weekly.' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Limit monitored domains per user
+    const existing = getMonitoredDomains(user.id);
+    const MAX_MONITORED = 25;
+    if (existing.length >= MAX_MONITORED) {
+      return new Response(JSON.stringify({ error: `Maximum ${MAX_MONITORED} monitored domains reached. Remove one first.` }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    addMonitoredDomain(user.id, domain, label, interval);
+    logAudit(user.id, 'monitor_add', domain, { interval });
+
+    createNotification(
+      user.id,
+      'monitor',
+      `Now monitoring ${domain}`,
+      `You'll be notified when the tech stack changes. Check interval: ${interval}.`,
+      domain
+    );
+
+    return new Response(JSON.stringify({
+      success: true,
+      domain,
+      interval,
+      message: `Now monitoring ${domain} (${interval} checks).`,
+    }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json' }
+    return new Response(JSON.stringify({ error: 'Monitor error: ' + (error.message || 'Unknown error') }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
+};
+
+export const GET: APIRoute = async (context) => {
+  const user = context.locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const domains = getMonitoredDomains(user.id);
+
+  const enriched = domains.map((d: any) => {
+    let techCount = 0;
+    let securityGrade = null;
+    let performanceScore = null;
+
+    if (d.latest_scan_data) {
+      try {
+        const scanData = JSON.parse(d.latest_scan_data);
+        techCount = (scanData.technologies || []).length;
+        securityGrade = scanData.securityGrade?.grade || null;
+        performanceScore = scanData.performance?.score || null;
+      } catch { }
+    }
+
+    return {
+      id: d.id,
+      domain: d.domain,
+      label: d.label,
+      interval: d.check_interval,
+      lastChecked: d.last_checked_at,
+      isActive: !!d.is_active,
+      createdAt: d.created_at,
+      techCount,
+      securityGrade,
+      performanceScore,
+    };
+  });
+
+  return new Response(JSON.stringify({ domains: enriched }), {
+    status: 200, headers: { 'Content-Type': 'application/json' },
+  });
 };

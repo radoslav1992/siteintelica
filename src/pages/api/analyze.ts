@@ -2,18 +2,21 @@ import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
-import db, { saveScan, getLastScan, getRecentScans } from '../../db/client';
+import db, { saveScan, getLastScan, getRecentScans, incrementScanCount, logAudit } from '../../db/client';
+import { checkRateLimit } from '../../db/client';
 import { enumerateSubdomains } from '../../utils/subdomain-enum';
 import { calculateSecurityGrade } from '../../utils/security-grade';
 import { fetchRobotsTxt, fetchSitemap, followRedirects, auditSEO, analyzeReadability, extractOutboundLinks, checkBrokenLinks, extractStructuredData, extractSocialProfiles, scanCookies } from '../../utils/seo-tools';
 import { calculateBusinessMetrics } from '../../utils/business-intel';
 import { auditAccessibility } from '../../utils/accessibility';
-import { getTrancoRank, rankToTraffic } from '../../utils/tranco';
-import { checkRateLimit, recordUsage } from '../../utils/rate-limit';
+import { getTrancoRank } from '../../utils/tranco';
+import { checkRateLimit as checkRateLimitLegacy, recordUsage } from '../../utils/rate-limit';
 import { fetchCruxData } from '../../utils/crux';
 import { estimateBacklinks } from '../../utils/backlinks';
 import { getIpIntel } from '../../utils/ip-intel';
 import { analyzeKeywordVisibility } from '../../utils/keyword-intel';
+import { runDeepSecurityScan } from '../../utils/deep-security';
+import { runAdvancedSEOAudit } from '../../utils/advanced-seo';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -269,6 +272,9 @@ export const POST: APIRoute = async (context) => {
     let accessibilityAudit: any = null;
     let backlinkData: any = null;
     let keywordIntel: any = null;
+    let deepSecurity: any = null;
+    let advancedSEO: any = null;
+    let fetchedHtml: string | null = null;
 
     if (isPremium) {
       try {
@@ -315,12 +321,25 @@ export const POST: APIRoute = async (context) => {
             });
             if (pageRes.ok) {
               const html = await pageRes.text();
+              fetchedHtml = html;
+              const cspHeader = pageRes.headers.get('content-security-policy');
+
               seoAudit = auditSEO(html);
               readability = analyzeReadability(html);
               outboundLinks = extractOutboundLinks(html, domain);
               structuredData = extractStructuredData(html);
               socialProfiles = extractSocialProfiles(html);
               accessibilityAudit = auditAccessibility(html);
+
+              // Deep security scan
+              deepSecurity = runDeepSecurityScan(
+                parsedData.technologies || [],
+                html, url, domain, cspHeader,
+                parsedData?.security
+              );
+
+              // Advanced SEO audit
+              advancedSEO = runAdvancedSEOAudit(html);
 
               // Keyword visibility analysis
               const plainText = html.replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -391,6 +410,8 @@ export const POST: APIRoute = async (context) => {
       ipIntel,
       backlinkData: isPremium ? backlinkData : null,
       keywordIntel: isPremium ? keywordIntel : null,
+      deepSecurity: isPremium ? deepSecurity : null,
+      advancedSEO: isPremium ? advancedSEO : null,
       businessMetrics: isPremium ? calculateBusinessMetrics({
         technologies: parsedData?.technologies,
         performance,
@@ -409,6 +430,8 @@ export const POST: APIRoute = async (context) => {
     // 5. Persist to History Database & record API usage
     const userId = context.locals.user?.id ?? undefined;
     saveScan(domain, enhancedData, userId);
+    if (userId) incrementScanCount(userId);
+    logAudit(userId || null, 'scan', domain, { isPremium });
     recordUsage('/api/analyze', userId, authHeader?.substring(7));
 
     return new Response(JSON.stringify(enhancedData), {
