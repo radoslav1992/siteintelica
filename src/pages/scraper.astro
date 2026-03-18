@@ -1,0 +1,511 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getContentWatches } from '../utils/content-tracker';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+
+const watches = getContentWatches(user.id);
+---
+
+<Layout title="Scraper Tools">
+  <div class="container page-content">
+    <header class="page-header">
+      <h1 class="text-gradient">Scraper Tools</h1>
+      <p class="text-secondary text-lg">Extract data from any website. Find contacts, crawl sites, and track content changes.</p>
+    </header>
+
+    <!-- Tab Navigation -->
+    <div class="tab-bar animate-fade-in">
+      <button class="tab active" data-tab="scrape">Smart Scraper</button>
+      <button class="tab" data-tab="contacts">Contact Finder</button>
+      <button class="tab" data-tab="crawl">Site Crawler</button>
+      <button class="tab" data-tab="traffic">Traffic Intel</button>
+      <button class="tab" data-tab="tracker">Change Tracker</button>
+    </div>
+
+    <!-- Smart Scraper Tab -->
+    <div class="tab-content active" id="tab-scrape">
+      <div class="glass-panel section animate-fade-in">
+        <h2 class="section-title">Smart Scraper</h2>
+        <p class="text-secondary text-sm mb-6">Extract structured data from any URL. Optionally add CSS selectors to target specific elements.</p>
+
+        <form id="scrapeForm" class="form-stack">
+          <div class="field">
+            <label class="field-label">URL</label>
+            <input type="text" id="scrapeUrl" placeholder="https://example.com/pricing" class="form-input" required />
+          </div>
+          <div class="field">
+            <label class="field-label">Custom CSS Selectors <span class="text-muted">(optional, one per line: name = selector)</span></label>
+            <textarea id="scrapeSelectors" class="form-textarea" rows="3" placeholder="prices = .pricing-card .price&#10;features = .feature-list li&#10;cta = .cta-button"></textarea>
+          </div>
+          <button type="submit" class="btn-primary" id="scrapeBtn">Scrape URL</button>
+        </form>
+
+        <div id="scrapeResult" class="result-area hidden"></div>
+      </div>
+    </div>
+
+    <!-- Contact Finder Tab -->
+    <div class="tab-content" id="tab-contacts">
+      <div class="glass-panel section animate-fade-in">
+        <h2 class="section-title">Contact & Email Finder</h2>
+        <p class="text-secondary text-sm mb-6">Deep-scan a domain to find emails, phone numbers, social profiles, and team members. Checks /contact, /about, /team, and more.</p>
+
+        <form id="contactForm" class="form-row">
+          <input type="text" id="contactDomain" placeholder="stripe.com" class="form-input" required />
+          <button type="submit" class="btn-primary" id="contactBtn">Find Contacts</button>
+        </form>
+
+        <div id="contactResult" class="result-area hidden"></div>
+      </div>
+    </div>
+
+    <!-- Site Crawler Tab -->
+    <div class="tab-content" id="tab-crawl">
+      <div class="glass-panel section animate-fade-in">
+        <h2 class="section-title">Site Crawler</h2>
+        <p class="text-secondary text-sm mb-6">Crawl a website following internal links. Get SEO health per page, find missing titles, thin content, broken images, and more.</p>
+
+        <form id="crawlForm" class="form-row">
+          <input type="text" id="crawlDomain" placeholder="example.com" class="form-input" required />
+          <input type="number" id="crawlMax" value="15" min="1" max="30" class="form-input-small" title="Max pages" />
+          <button type="submit" class="btn-primary" id="crawlBtn">Start Crawl</button>
+        </form>
+        <p class="text-muted text-sm" style="margin-top:0.5rem;">Max 30 pages. This may take a minute for larger sites.</p>
+
+        <div id="crawlResult" class="result-area hidden"></div>
+      </div>
+    </div>
+
+    <!-- Traffic Intelligence Tab -->
+    <div class="tab-content" id="tab-traffic">
+      <div class="glass-panel section animate-fade-in">
+        <h2 class="section-title">Traffic Intelligence</h2>
+        <p class="text-secondary text-sm mb-6">Estimate any website's traffic from multiple free sources: Tranco ranking, Cloudflare Radar, Wayback Machine frequency, CDN detection, and ad network presence.</p>
+
+        <form id="trafficForm" class="form-row">
+          <input type="text" id="trafficDomain" placeholder="stripe.com" class="form-input" required />
+          <button type="submit" class="btn-primary" id="trafficBtn">Analyze Traffic</button>
+        </form>
+
+        <div id="trafficResult" class="result-area hidden"></div>
+      </div>
+    </div>
+
+    <!-- Content Change Tracker Tab -->
+    <div class="tab-content" id="tab-tracker">
+      <div class="glass-panel section animate-fade-in">
+        <h2 class="section-title">Content Change Tracker</h2>
+        <p class="text-secondary text-sm mb-6">Watch specific page elements for changes. Enter a URL and CSS selector, and we'll alert you when the content changes.</p>
+
+        <form id="watchForm" class="form-stack">
+          <div class="field-row">
+            <div class="field" style="flex:2;">
+              <label class="field-label">URL</label>
+              <input type="text" id="watchUrl" placeholder="https://competitor.com/pricing" class="form-input" required />
+            </div>
+            <div class="field" style="flex:1;">
+              <label class="field-label">CSS Selector</label>
+              <input type="text" id="watchSelector" placeholder=".pricing-table" class="form-input" required />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field" style="flex:1;">
+              <label class="field-label">Label <span class="text-muted">(optional)</span></label>
+              <input type="text" id="watchLabel" placeholder="Competitor pricing" class="form-input" />
+            </div>
+            <button type="submit" class="btn-primary" style="align-self:flex-end;">Add Watch</button>
+          </div>
+        </form>
+
+        <div style="margin-top:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <h3 class="text-sm font-semibold">Active Watches ({watches.length})</h3>
+            <button class="btn-outline-sm" id="checkAllBtn">Check All Now</button>
+          </div>
+          <div id="watchList">
+            {watches.length > 0 ? watches.map((w) => (
+              <div class="watch-item" data-id={w.id}>
+                <div class="watch-info">
+                  <div class="watch-label">{w.label || w.selector}</div>
+                  <div class="watch-url">{w.url}</div>
+                  <div class="watch-selector">Selector: <code>{w.selector}</code></div>
+                  {w.lastCheckedAt && <div class="watch-date">Last checked: {new Date(w.lastCheckedAt).toLocaleString()}</div>}
+                </div>
+                <div class="watch-actions">
+                  <button class="btn-outline-sm snapshots-btn" data-id={w.id}>History</button>
+                  <button class="btn-danger-sm remove-btn" data-id={w.id}>Remove</button>
+                </div>
+              </div>
+            )) : (
+              <p class="text-muted text-sm">No active watches. Add one above to start tracking content changes.</p>
+            )}
+          </div>
+          <div id="watchStatus" class="hidden text-sm" style="margin-top:0.75rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .page-content { padding-top: 6rem; padding-bottom: 6rem; }
+    .page-header { text-align: center; margin-bottom: 2rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+
+    .tab-bar { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0; overflow-x: auto; }
+    .tab {
+      padding: 0.65rem 1.1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      background: none; border: none; color: hsl(var(--text-muted)); border-bottom: 2px solid transparent;
+      transition: all 0.15s ease; white-space: nowrap;
+    }
+    .tab:hover { color: hsl(var(--text-primary)); }
+    .tab.active { color: hsl(var(--accent-primary)); border-bottom-color: hsl(var(--accent-primary)); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .section { padding: 2rem; }
+    .section-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+
+    .form-stack { display: flex; flex-direction: column; gap: 1rem; }
+    .form-row { display: flex; gap: 0.75rem; align-items: flex-end; }
+    .field-row { display: flex; gap: 0.75rem; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+    .field-label { font-size: 0.8rem; font-weight: 600; color: hsl(var(--text-secondary)); }
+    .form-input, .form-textarea {
+      padding: 0.75rem 1rem; border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+      color: hsl(var(--text-primary)); font-size: 0.9rem; font-family: var(--font-mono);
+      width: 100%;
+    }
+    .form-input:focus, .form-textarea:focus { outline: none; border-color: hsl(var(--accent-primary)); }
+    .form-textarea { resize: vertical; }
+    .form-input-small { width: 80px; text-align: center; }
+
+    .result-area { margin-top: 1.5rem; padding: 1.25rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); overflow-x: auto; }
+
+    .btn-outline-sm {
+      padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      background: none; border: 1px solid rgba(255,255,255,0.12); color: hsl(var(--text-secondary));
+      border-radius: var(--radius-sm); transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: hsl(var(--accent-primary)); color: hsl(var(--accent-primary)); }
+    .btn-danger-sm {
+      padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      background: none; border: 1px solid rgba(255,255,255,0.08); color: hsl(var(--danger));
+      border-radius: var(--radius-sm); transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { background: hsla(var(--danger), 0.1); }
+
+    .watch-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+      padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+      border-radius: var(--radius-md);
+    }
+    .watch-label { font-weight: 700; font-size: 0.9rem; }
+    .watch-url { font-size: 0.75rem; color: hsl(var(--accent-primary)); font-family: var(--font-mono); }
+    .watch-selector { font-size: 0.72rem; color: hsl(var(--text-muted)); }
+    .watch-selector code { background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px; }
+    .watch-date { font-size: 0.7rem; color: hsl(var(--text-muted)); }
+    .watch-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    /* Contact result cards */
+    .contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .contact-card { padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); }
+    .contact-card h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: hsl(var(--text-primary)); }
+
+    /* Crawl result */
+    .crawl-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .crawl-stat { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); }
+    .crawl-stat-value { font-size: 1.5rem; font-weight: 900; color: hsl(var(--text-primary)); }
+    .crawl-stat-label { font-size: 0.7rem; color: hsl(var(--text-muted)); font-weight: 600; text-transform: uppercase; }
+
+    .page-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.8rem; }
+    .page-url { font-family: var(--font-mono); font-size: 0.75rem; color: hsl(var(--accent-primary)); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .page-issues { color: hsl(var(--danger)); font-weight: 700; font-size: 0.72rem; }
+    .page-ok { color: hsl(var(--success)); font-weight: 700; font-size: 0.72rem; }
+
+    @media (max-width: 640px) {
+      .form-row { flex-direction: column; }
+      .field-row { flex-direction: column; }
+      .watch-item { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        const target = document.getElementById(`tab-${tab.dataset.tab}`);
+        if (target) target.classList.add('active');
+      });
+    });
+
+    // Smart Scraper
+    const scrapeForm = document.getElementById('scrapeForm') as HTMLFormElement;
+    scrapeForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('scrapeBtn') as HTMLButtonElement;
+      const result = document.getElementById('scrapeResult') as HTMLElement;
+      const url = (document.getElementById('scrapeUrl') as HTMLInputElement).value.trim();
+      const rawSelectors = (document.getElementById('scrapeSelectors') as HTMLTextAreaElement).value.trim();
+
+      let selectors: Record<string, string> | undefined;
+      if (rawSelectors) {
+        selectors = {};
+        rawSelectors.split('\n').forEach(line => {
+          const [name, ...rest] = line.split('=');
+          if (name && rest.length) selectors![name.trim()] = rest.join('=').trim();
+        });
+      }
+
+      btn.disabled = true; btn.textContent = 'Scraping...';
+      result.classList.remove('hidden');
+      result.innerHTML = '<span class="text-muted">Fetching page...</span>';
+
+      try {
+        const res = await fetch('/api/scrape', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, selectors }) });
+        const data = await res.json();
+        if (!res.ok) { result.innerHTML = `<span style="color:hsl(var(--danger))">${data.error}</span>`; return; }
+
+        result.innerHTML = `
+          <div style="margin-bottom:1rem;">
+            <strong>${data.title || 'No title'}</strong>
+            <div class="text-muted text-sm">${data.description || 'No description'}</div>
+            <div class="text-sm" style="margin-top:0.3rem;">${data.wordCount} words · ${data.links.length} links · ${data.images.length} images · ${data.emails.length} emails</div>
+          </div>
+          ${data.emails.length > 0 ? `<div style="margin-bottom:0.75rem;"><strong class="text-sm">Emails:</strong> ${data.emails.map((e: string) => `<code style="font-size:0.78rem;">${e}</code>`).join(', ')}</div>` : ''}
+          ${data.phones.length > 0 ? `<div style="margin-bottom:0.75rem;"><strong class="text-sm">Phones:</strong> ${data.phones.join(', ')}</div>` : ''}
+          ${Object.keys(data.socialProfiles).length > 0 ? `<div style="margin-bottom:0.75rem;"><strong class="text-sm">Social:</strong> ${Object.entries(data.socialProfiles).map(([k, v]) => `<a href="${v}" target="_blank" style="color:hsl(var(--accent-primary));font-size:0.8rem;">${k}</a>`).join(' · ')}</div>` : ''}
+          ${data.customSelectors ? `<div style="margin-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.75rem;"><strong class="text-sm">Custom Selectors:</strong>${Object.entries(data.customSelectors).map(([name, vals]: [string, any]) => `<div style="margin-top:0.4rem;"><code class="text-sm">${name}</code>: ${vals.slice(0, 5).map((v: string) => `<span class="text-sm">"${v.substring(0, 100)}"</span>`).join(', ')}</div>`).join('')}</div>` : ''}
+          <details style="margin-top:0.75rem;"><summary class="text-sm" style="cursor:pointer;color:hsl(var(--text-muted));">Raw JSON</summary><pre style="font-size:0.7rem;max-height:300px;overflow:auto;margin-top:0.5rem;">${JSON.stringify(data, null, 2)}</pre></details>
+        `;
+      } catch { result.innerHTML = '<span style="color:hsl(var(--danger))">Network error</span>'; }
+      btn.disabled = false; btn.textContent = 'Scrape URL';
+    });
+
+    // Contact Finder
+    const contactForm = document.getElementById('contactForm') as HTMLFormElement;
+    contactForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('contactBtn') as HTMLButtonElement;
+      const result = document.getElementById('contactResult') as HTMLElement;
+      const domain = (document.getElementById('contactDomain') as HTMLInputElement).value.trim();
+
+      btn.disabled = true; btn.textContent = 'Scanning pages...';
+      result.classList.remove('hidden');
+      result.innerHTML = '<span class="text-muted">Scanning up to 10 pages...</span>';
+
+      try {
+        const res = await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain }) });
+        const data = await res.json();
+        if (!res.ok) { result.innerHTML = `<span style="color:hsl(var(--danger))">${data.error}</span>`; return; }
+
+        const confColor = data.confidence === 'high' ? 'var(--success)' : data.confidence === 'medium' ? 'var(--warning)' : 'var(--danger)';
+
+        result.innerHTML = `
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+            <strong style="font-size:1.1rem;">${data.domain}</strong>
+            <span style="font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:99px;background:hsla(${confColor},0.1);color:hsl(${confColor});">${data.confidence} confidence</span>
+            <span class="text-muted text-sm">${data.pagesScanned} pages scanned</span>
+          </div>
+          <div class="contact-grid">
+            ${data.emails.length > 0 ? `<div class="contact-card"><h4>📧 Emails (${data.emails.length})</h4>${data.emails.map((e: any) => `<div style="font-size:0.82rem;margin-bottom:0.3rem;"><a href="mailto:${e.address}" style="color:hsl(var(--accent-primary));">${e.address}</a> <span class="badge" style="font-size:0.6rem;">${e.type}</span> <span class="text-muted" style="font-size:0.65rem;">from ${e.source}</span></div>`).join('')}</div>` : ''}
+            ${data.phones.length > 0 ? `<div class="contact-card"><h4>📞 Phones (${data.phones.length})</h4>${data.phones.map((p: any) => `<div style="font-size:0.82rem;margin-bottom:0.3rem;"><a href="tel:${p.number}" style="color:hsl(var(--accent-primary));">${p.number}</a> <span class="text-muted" style="font-size:0.65rem;">from ${p.source}</span></div>`).join('')}</div>` : ''}
+            ${Object.keys(data.socialProfiles).length > 0 ? `<div class="contact-card"><h4>🌐 Social Profiles</h4>${Object.entries(data.socialProfiles).map(([platform, urls]: [string, any]) => `<div style="font-size:0.82rem;margin-bottom:0.3rem;"><strong>${platform}:</strong> ${urls.map((u: string) => `<a href="${u}" target="_blank" style="color:hsl(var(--accent-primary));font-size:0.78rem;">${u.split('/').pop()}</a>`).join(', ')}</div>`).join('')}</div>` : ''}
+            ${data.people.length > 0 ? `<div class="contact-card"><h4>👥 People (${data.people.length})</h4>${data.people.map((p: any) => `<div style="font-size:0.82rem;margin-bottom:0.4rem;"><strong>${p.name}</strong>${p.role ? ` — ${p.role}` : ''}${p.email ? `<br/><a href="mailto:${p.email}" style="color:hsl(var(--accent-primary));font-size:0.75rem;">${p.email}</a>` : ''}${p.linkedin ? ` <a href="${p.linkedin}" target="_blank" style="font-size:0.7rem;">LinkedIn</a>` : ''}</div>`).join('')}</div>` : ''}
+            ${data.addresses.length > 0 ? `<div class="contact-card"><h4>📍 Addresses</h4>${data.addresses.map((a: string) => `<div style="font-size:0.8rem;margin-bottom:0.3rem;">${a}</div>`).join('')}</div>` : ''}
+          </div>
+          ${data.emails.length === 0 && data.phones.length === 0 ? '<p class="text-muted" style="margin-top:0.5rem;">No contact information found. The site may use forms or obfuscated contact methods.</p>' : ''}
+        `;
+      } catch { result.innerHTML = '<span style="color:hsl(var(--danger))">Network error</span>'; }
+      btn.disabled = false; btn.textContent = 'Find Contacts';
+    });
+
+    // Site Crawler
+    const crawlForm = document.getElementById('crawlForm') as HTMLFormElement;
+    crawlForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('crawlBtn') as HTMLButtonElement;
+      const result = document.getElementById('crawlResult') as HTMLElement;
+      const domain = (document.getElementById('crawlDomain') as HTMLInputElement).value.trim();
+      const maxPages = parseInt((document.getElementById('crawlMax') as HTMLInputElement).value) || 15;
+
+      btn.disabled = true; btn.textContent = 'Crawling...';
+      result.classList.remove('hidden');
+      result.innerHTML = '<span class="text-muted">Crawling site (this may take a while)...</span>';
+
+      try {
+        const res = await fetch('/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain, maxPages }) });
+        const data = await res.json();
+        if (!res.ok) { result.innerHTML = `<span style="color:hsl(var(--danger))">${data.error}</span>`; return; }
+
+        const healthColor = data.summary.healthPercent >= 80 ? 'var(--success)' : data.summary.healthPercent >= 60 ? 'var(--warning)' : 'var(--danger)';
+
+        result.innerHTML = `
+          <div class="crawl-summary">
+            <div class="crawl-stat"><div class="crawl-stat-value" style="color:hsl(${healthColor})">${data.summary.healthPercent}%</div><div class="crawl-stat-label">Health</div></div>
+            <div class="crawl-stat"><div class="crawl-stat-value">${data.pagesCrawled}</div><div class="crawl-stat-label">Pages</div></div>
+            <div class="crawl-stat"><div class="crawl-stat-value">${data.summary.totalIssues}</div><div class="crawl-stat-label">Issues</div></div>
+            <div class="crawl-stat"><div class="crawl-stat-value">${data.summary.avgWordCount}</div><div class="crawl-stat-label">Avg Words</div></div>
+            <div class="crawl-stat"><div class="crawl-stat-value">${data.summary.avgLoadTimeMs}ms</div><div class="crawl-stat-label">Avg Load</div></div>
+          </div>
+          ${data.siteIssues.length > 0 ? `<div style="margin-bottom:1rem;"><strong class="text-sm">Top Issues:</strong>${data.siteIssues.slice(0, 5).map((i: any) => `<div style="font-size:0.8rem;display:flex;gap:0.5rem;padding:0.2rem 0;"><span style="color:hsl(${i.severity === 'error' ? 'var(--danger)' : i.severity === 'warning' ? 'var(--warning)' : 'var(--text-muted)'})">●</span><span>${i.issue}</span><span class="text-muted">(${i.count} page${i.count > 1 ? 's' : ''})</span></div>`).join('')}</div>` : ''}
+          <div><strong class="text-sm">Pages:</strong></div>
+          ${data.pages.map((p: any) => `
+            <div class="page-row">
+              <span class="page-url" title="${p.url}">${p.url.replace('https://' + data.domain, '') || '/'}</span>
+              <span class="text-muted" style="font-size:0.7rem;">${p.wordCount}w</span>
+              <span class="text-muted" style="font-size:0.7rem;">${p.loadTimeMs}ms</span>
+              ${p.issues.length > 0 ? `<span class="page-issues">${p.issues.length} issue${p.issues.length > 1 ? 's' : ''}</span>` : `<span class="page-ok">✓</span>`}
+            </div>
+          `).join('')}
+        `;
+      } catch { result.innerHTML = '<span style="color:hsl(var(--danger))">Network error</span>'; }
+      btn.disabled = false; btn.textContent = 'Start Crawl';
+    });
+
+    // Traffic Intelligence
+    function fmtNum(n: number): string {
+      if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + 'B';
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+      if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+      return n.toString();
+    }
+
+    const trafficForm = document.getElementById('trafficForm') as HTMLFormElement;
+    trafficForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('trafficBtn') as HTMLButtonElement;
+      const result = document.getElementById('trafficResult') as HTMLElement;
+      const domain = (document.getElementById('trafficDomain') as HTMLInputElement).value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+      btn.disabled = true; btn.textContent = 'Analyzing...';
+      result.classList.remove('hidden');
+      result.innerHTML = '<span class="text-muted">Querying multiple sources (Tranco, Cloudflare Radar, Wayback Machine, DNS)...</span>';
+
+      try {
+        const res = await fetch(`/api/traffic?domain=${encodeURIComponent(domain)}`);
+        const data = await res.json();
+        if (!res.ok) { result.innerHTML = `<span style="color:hsl(var(--danger))">${data.error}</span>`; return; }
+
+        const c = data.composite;
+        const confColor = c.confidence === 'high' ? 'var(--success)' : c.confidence === 'medium' ? 'var(--warning)' : 'var(--text-muted)';
+
+        result.innerHTML = `
+          <div style="text-align:center; margin-bottom:1.25rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:0.72rem; font-weight:600; text-transform:uppercase; color:hsl(var(--text-muted)); margin-bottom:0.25rem;">Estimated Monthly Visitors</div>
+            <div style="font-size:2rem; font-weight:900; color:hsl(var(--text-primary));">${fmtNum(c.estimatedMonthly.low)} — ${fmtNum(c.estimatedMonthly.high)}</div>
+            <div style="display:flex; justify-content:center; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
+              <span class="badge" style="font-size:0.68rem; background:hsla(${confColor}, 0.1); color:hsl(${confColor});">${c.confidence} confidence</span>
+              <span class="badge" style="font-size:0.68rem;">${c.tier}</span>
+              <span class="badge" style="font-size:0.68rem;">${c.percentile}</span>
+            </div>
+            <div style="font-size:0.8rem; color:hsl(var(--text-muted)); margin-top:0.5rem;">Daily: ~${fmtNum(c.estimatedDaily.low)} — ${fmtNum(c.estimatedDaily.high)}</div>
+          </div>
+          <div style="font-size:0.75rem; font-weight:700; color:hsl(var(--text-muted)); margin-bottom:0.5rem;">DATA SOURCES</div>
+          ${data.sources.map((s: any) => `
+            <div style="display:flex; align-items:center; gap:0.6rem; font-size:0.8rem; padding:0.35rem 0; border-bottom:1px solid rgba(255,255,255,0.03);">
+              <span style="color:hsl(${s.estimatedMonthly ? 'var(--success)' : 'var(--text-muted)'}); font-size:0.65rem;">●</span>
+              <span style="font-weight:700; min-width:130px; color:hsl(var(--text-secondary));">${s.source}</span>
+              <span style="color:hsl(var(--text-muted)); flex:1;">${s.details || '—'}</span>
+              ${s.estimatedMonthly ? `<span style="font-weight:600; color:hsl(var(--text-primary)); white-space:nowrap;">${fmtNum(s.estimatedMonthly.low)}-${fmtNum(s.estimatedMonthly.high)}/mo</span>` : ''}
+            </div>
+          `).join('')}
+          ${data.cdnDetected ? `<div style="margin-top:0.75rem; font-size:0.82rem;"><strong>CDN:</strong> ${data.cdnDetected}</div>` : ''}
+          ${data.adNetworks.length > 0 ? `<div style="font-size:0.82rem;"><strong>Ad Networks:</strong> ${data.adNetworks.join(', ')}</div>` : ''}
+        `;
+      } catch { result.innerHTML = '<span style="color:hsl(var(--danger))">Network error</span>'; }
+      btn.disabled = false; btn.textContent = 'Analyze Traffic';
+    });
+
+    // Content Watch — Add
+    const watchForm = document.getElementById('watchForm') as HTMLFormElement;
+    watchForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = (document.getElementById('watchUrl') as HTMLInputElement).value.trim();
+      const selector = (document.getElementById('watchSelector') as HTMLInputElement).value.trim();
+      const label = (document.getElementById('watchLabel') as HTMLInputElement).value.trim();
+
+      try {
+        const res = await fetch('/api/content-watch', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'add', url, selector, label }),
+        });
+        const data = await res.json();
+        if (data.success) location.reload();
+        else alert(data.error || 'Failed to add watch');
+      } catch { alert('Network error'); }
+    });
+
+    // Content Watch — Remove
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const watchId = parseInt((btn as HTMLElement).dataset.id!);
+        if (!confirm('Remove this watch?')) return;
+        try {
+          await fetch('/api/content-watch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove', watchId }),
+          });
+          location.reload();
+        } catch { }
+      });
+    });
+
+    // Content Watch — Check All
+    document.getElementById('checkAllBtn')?.addEventListener('click', async () => {
+      const status = document.getElementById('watchStatus') as HTMLElement;
+      const btn = document.getElementById('checkAllBtn') as HTMLButtonElement;
+      btn.disabled = true; btn.textContent = 'Checking...';
+      status.classList.remove('hidden');
+      status.innerHTML = '<span class="text-muted">Checking all watches...</span>';
+
+      try {
+        const res = await fetch('/api/content-watch', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'check' }),
+        });
+        const data = await res.json();
+        if (data.changes?.length > 0) {
+          status.innerHTML = `<span style="color:hsl(var(--warning))">Found ${data.changes.length} change(s)!</span>`;
+        } else {
+          status.innerHTML = '<span style="color:hsl(var(--success))">No changes detected.</span>';
+        }
+      } catch { status.innerHTML = '<span style="color:hsl(var(--danger))">Check failed</span>'; }
+      btn.disabled = false; btn.textContent = 'Check All Now';
+    });
+
+    // Content Watch — View Snapshots
+    document.querySelectorAll('.snapshots-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const watchId = parseInt((btn as HTMLElement).dataset.id!);
+        const item = (btn as HTMLElement).closest('.watch-item') as HTMLElement;
+        const existing = item.querySelector('.snapshot-panel');
+        if (existing) { existing.remove(); return; }
+
+        try {
+          const res = await fetch('/api/content-watch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'snapshots', watchId }),
+          });
+          const data = await res.json();
+          const panel = document.createElement('div');
+          panel.className = 'snapshot-panel';
+          panel.style.cssText = 'margin-top:0.75rem;padding:0.75rem;background:rgba(0,0,0,0.2);border-radius:6px;font-size:0.78rem;max-height:200px;overflow-y:auto;width:100%;';
+          if (data.length === 0) {
+            panel.textContent = 'No snapshots yet. Click "Check All Now" to capture the first snapshot.';
+          } else {
+            panel.innerHTML = data.map((s: any) => `<div style="padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);"><span class="text-muted">${new Date(s.capturedAt).toLocaleString()}</span><div style="margin-top:0.2rem;">${s.content.substring(0, 200)}${s.content.length > 200 ? '...' : ''}</div></div>`).join('');
+          }
+          item.appendChild(panel);
+        } catch { }
+      });
+    });
+  </script>
+</Layout>

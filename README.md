@@ -101,6 +101,12 @@ Advanced tech stack analyzer and competitor intelligence platform. X-Ray any web
 - **Expiration** — Optional expiry date for time-limited sharing
 - **Management API** — Create, list, and manage shared reports via `/api/share`
 
+#### Scraper Tools (`/scraper`)
+- **Smart Scraper API** — Extract structured data from any URL: title, meta, headings, links, images, emails, phones, social profiles, JSON-LD, and custom CSS selectors
+- **Contact & Email Finder** — Deep multi-page scan (/contact, /about, /team, /imprint) to find emails (classified as general/support/sales/personal), phones, social profiles, team members, and addresses
+- **Site Crawler** — Follow internal links up to 30 pages, build a page map with SEO health per page (missing titles, thin content, broken images, slow loads) with aggregate health score
+- **Content Change Tracker** — Monitor specific CSS selectors on any page for text changes. Add up to 25 watches, check on demand, view snapshot history, get notified when content changes
+
 #### Domain Monitoring (`/monitoring`)
 - **Watchlist Management** — Add up to 25 competitor domains with custom labels
 - **Flexible Check Intervals** — Hourly, daily, or weekly monitoring
@@ -211,6 +217,10 @@ src/
     ├── business-intel.ts# Multi-source traffic, cost, carbon, authority calculators
     ├── crux.ts          # Chrome UX Report API client
     ├── change-detector.ts # Automated change detection + webhook delivery
+    ├── contact-finder.ts# Multi-page email, phone, social, people extraction
+    ├── content-tracker.ts # CSS-selector content change monitoring
+    ├── site-crawler.ts  # Internal link crawler with per-page SEO analysis
+    ├── scraper.ts       # General-purpose URL scraper with custom selectors
     ├── competitive-benchmark.ts # Percentile ranking against database
     ├── deep-security.ts # CVE lookup, CSP analysis, mixed content, 3rd-party risk scoring
     ├── health-score.ts  # Composite 0-100 site health score with grading
@@ -245,6 +255,8 @@ tests/                   # Vitest test suite for utility functions
 | `api_usage` | Per-request API usage logging with latency and status |
 | `shared_reports` | Shareable report links with view tracking and optional expiry |
 | `uptime_checks` | HTTP health check history with latency and SSL cert data |
+| `content_watches` | CSS-selector content change monitors per user |
+| `content_snapshots` | Historical snapshots of watched content for diff comparison |
 
 ## Environment
 

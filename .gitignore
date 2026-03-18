@@ -27,3 +27,5 @@ siteintelica_scans.db
 
 # Tranco data cache
 data/
+siteintelica_scans.db-shm
+siteintelica_scans.db-wal

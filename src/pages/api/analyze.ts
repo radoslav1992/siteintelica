@@ -21,6 +21,7 @@ import { calculateHealthScore } from '../../utils/health-score';
 import { getAdvisories, getStackRecommendations } from '../../utils/tech-alternatives';
 import { findSimilarSites } from '../../utils/similar-sites';
 import { generateBenchmark } from '../../utils/competitive-benchmark';
+import { getTrafficIntelligence } from '../../utils/traffic-intel';
 
 const execAsync = promisify(exec);
 export const prerender = false;
@@ -440,6 +441,10 @@ export const POST: APIRoute = async (context) => {
       (enhancedData as any).stackRecommendations = getStackRecommendations(techs);
       (enhancedData as any).similarSites = findSimilarSites(domain, techs.map((t: any) => t.name), 8);
       (enhancedData as any).benchmark = generateBenchmark(domain, enhancedData);
+
+      try {
+        (enhancedData as any).trafficIntel = await getTrafficIntelligence(domain, techs.map((t: any) => t.name));
+      } catch { }
     }
 
     // 7. Persist to History Database & record API usage
