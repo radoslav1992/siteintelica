@@ -274,6 +274,7 @@ const watches = getContentWatches(user.id);
         if (!res.ok) { result.innerHTML = `<span style="color:hsl(var(--danger))">${data.error}</span>`; return; }
 
         result.innerHTML = `
+          ${data.warning ? `<div style="margin-bottom:1rem; padding:0.75rem; background:hsla(var(--warning), 0.08); border:1px solid hsla(var(--warning), 0.2); border-radius:var(--radius-sm); font-size:0.8rem; color:hsl(var(--warning)); line-height:1.5;">⚠️ ${data.warning}</div>` : ''}
           <div style="margin-bottom:1rem;">
             <strong>${data.title || 'No title'}</strong>
             <div class="text-muted text-sm">${data.description || 'No description'}</div>

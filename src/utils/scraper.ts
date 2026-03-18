@@ -6,9 +6,30 @@
 
 import * as cheerio from 'cheerio';
 
-const FETCH_TIMEOUT_MS = 12000;
+const FETCH_TIMEOUT_MS = 15000;
 const MAX_BODY_SIZE = 5 * 1024 * 1024;
-const USER_AGENT = 'SiteIntelica Scraper/1.0 (+https://siteintelica.com)';
+
+const BROWSER_UAS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+];
+
+const BROWSER_HEADERS: Record<string, string> = {
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Sec-Ch-Ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"macOS"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+};
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 const PHONE_REGEX = /(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}/g;
@@ -45,11 +66,52 @@ export interface ScrapeResult {
 }
 
 export async function fetchPage(url: string): Promise<{ html: string; statusCode: number; headers: Record<string, string> }> {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html,application/xhtml+xml' },
+  const ua = BROWSER_UAS[Math.floor(Math.random() * BROWSER_UAS.length)];
+  const parsedUrl = new URL(url);
+
+  const requestHeaders: Record<string, string> = {
+    ...BROWSER_HEADERS,
+    'User-Agent': ua,
+    'Host': parsedUrl.host,
+    'Referer': `${parsedUrl.protocol}//${parsedUrl.host}/`,
+  };
+
+  // Attempt 1: full browser headers
+  let res = await fetch(url, {
+    headers: requestHeaders,
     redirect: 'follow',
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
+
+  // Attempt 2: if blocked, try Google cache as fallback
+  if (res.status === 403 || res.status === 429) {
+    try {
+      const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+      const cacheRes = await fetch(cacheUrl, {
+        headers: { 'User-Agent': ua, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (cacheRes.ok) {
+        res = cacheRes;
+      }
+    } catch { }
+  }
+
+  // Attempt 3: if still blocked, try archive.org's latest snapshot
+  if (res.status === 403 || res.status === 429) {
+    try {
+      const archiveUrl = `https://web.archive.org/web/2024/${url}`;
+      const archiveRes = await fetch(archiveUrl, {
+        headers: { 'User-Agent': ua, 'Accept': 'text/html' },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (archiveRes.ok) {
+        res = archiveRes;
+      }
+    } catch { }
+  }
 
   const contentLength = res.headers.get('content-length');
   if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
