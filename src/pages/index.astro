@@ -443,6 +443,13 @@ const schemaData = {
 
   <script>
     import { initFAQ } from '../scripts/faq.js';
+    import { marked } from 'marked';
+
+    marked.setOptions({ breaks: true, gfm: true });
+
+    function renderMarkdown(md: string): string {
+      return marked.parse(md) as string;
+    }
     
     // Dynamically load html2pdf
     const script = document.createElement('script');
@@ -1659,7 +1666,7 @@ const schemaData = {
               🕰️ Wayback History
             </button>
           </div>
-          <div id="aiOutput" style="margin-top:1rem; display:none; padding:1rem; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.82rem; line-height:1.6; white-space:pre-wrap; color:hsl(var(--text-primary)); max-height:400px; overflow-y:auto;"></div>
+          <div id="aiOutput" class="ai-markdown-output" style="margin-top:1rem; display:none; padding:1rem; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.82rem; line-height:1.6; color:hsl(var(--text-primary)); max-height:400px; overflow-y:auto;"></div>
         `;
         
         secAI.body.appendChild(aiCard);
@@ -1686,10 +1693,11 @@ const schemaData = {
             });
             const result = await res.json();
             if (res.ok) {
-              aiOutput.innerHTML = (result.summary || result.email || 
-                (result.recommendations ? result.recommendations.map(r => 
+              const rawContent = result.summary || result.email ||
+                (result.recommendations ? result.recommendations.map((r: any) =>
                   `<div style="margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid hsla(var(--text-primary), 0.1);"><strong style="color:#ffa726;">⚠️ ${r.technology}</strong><br/><span style="color:hsl(var(--text-secondary));">${r.risk}</span><br/><span style="color:#00e676;">💡 ${r.suggestion}</span></div>`
-                ).join('') : 'Done.')).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
+                ).join('') : 'Done.');
+              aiOutput.innerHTML = result.recommendations ? rawContent : renderMarkdown(rawContent);
             } else {
               aiOutput.textContent = 'Error: ' + (result.error || 'Unknown error');
             }
@@ -1753,7 +1761,7 @@ const schemaData = {
             headers: { 'Content-Type': 'application/json' }
           }).then(r => r.json()).then(result => {
             if (result.report) {
-              aiOutput.innerHTML = result.report.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/##\s?(.*?)\n/g, '<h4 style="margin:0.75rem 0 0.25rem; color:hsl(var(--accent-primary));">$1</h4>').replace(/\n/g, '<br/>');
+              aiOutput.innerHTML = renderMarkdown(result.report);
             } else {
               aiOutput.textContent = 'Error: ' + (result.error || 'Unknown error');
             }
